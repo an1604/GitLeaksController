@@ -1,0 +1,4 @@
+annotated-types
+pydantic
+pydantic-core
+typing-extensions

@@ -5,6 +5,8 @@ import shlex
 import subprocess
 import argparse
 
+from bonus import LeakReport
+
 logger = logging.getLogger(__name__)
 
 
@@ -56,11 +58,14 @@ def get_findings_from_file(output_filepath):
     :param output_filepath:
     :return: an array of dictionaries
     """
-    findings = []
-    with open(output_filepath, 'r') as output_file:
-        findings = json.load(output_file)
+    try:
+        findings = []
+        with open(output_filepath, 'r') as output_file:
+            findings = json.load(output_file)
 
-    return findings
+        return findings['findings']
+    except:
+        return findings
 
 
 def parse_json_output(_current_dir_, __output_filename__):
@@ -76,15 +81,13 @@ def parse_json_output(_current_dir_, __output_filename__):
         filename = __finding__['File']
         line_range = f"{__finding__['StartLine']}-{__finding__['EndLine']}"
         desc = __finding__['Description']
-        output['findings'].append({
+        finding_dict = {
             "filename": filename,
             "line_range": line_range,
             "description": desc
-        })
-
-    with open(__custom_output_filepath__, 'w') as file:
-        file.write(json.dumps(output))
-    return __custom_output_filepath__
+        }
+        output['findings'].append(finding_dict)
+    return output
 
 
 def get_parser():
@@ -126,7 +129,26 @@ def get_parser():
         help="Printing output directly to the terminal. Default: True"
     )
 
+    parser.add_argument(
+        "--bonus",
+        dest='bonus',
+        type=bool,
+        default=True,
+        help="Including the bonus section. Default: True"
+    )
+
     return parser
+
+
+def show_results(custom_output, bonus):
+    if bonus:
+        custom_output = [LeakReport(**finding_dict) for finding_dict in custom_output['findings']]
+        print("Here are all the pydantic models:")
+        for i, finding in enumerate(custom_output):
+            print(f"{i + 1}) {finding}")
+    else:
+        print("Here are all the JSON objects:")
+        print(custom_output)
 
 
 def main(__args__):
@@ -135,11 +157,9 @@ def main(__args__):
 
     _process_ = run_gitleaks(dirname)
 
-    custom_output_filepath = parse_json_output(dirname, output_filename)
+    custom_output = parse_json_output(dirname, output_filename)
     if __args__.show_result:
-        custom_findings = get_findings_from_file(custom_output_filepath)
-        for finding in custom_findings['findings']:
-            print(finding)
+        show_results(custom_output, bonus=__args__.bonus)
 
 
 if __name__ == '__main__':
