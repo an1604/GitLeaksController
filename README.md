@@ -31,14 +31,12 @@ flags whether running the tool locally or via Docker.
 
 ### **Available Flags**
 
-| Flag                | Default                        | Description                                                       |
-|---------------------|--------------------------------|-------------------------------------------------------------------|
-| `--dir DIRNAME`     | Your current working directory | Path to the directory to scan for sensitive information leaks.    |
-| `--output_filename` | `output.json`                  | Name of the file where scan results will be saved.                |
-| `--show_result`     | `True`                         | Print the scan results directly to the terminal after completion. |
-| `--bonus`           | `True`                         | Include additional structured output using Pydantic models.       |
-
----
+| Flag                                | Default                                                                             | Description                                                       |
+|-------------------------------------|-------------------------------------------------------------------------------------|-------------------------------------------------------------------|
+| `--dir DIRNAME`                     | Your current working directory (`C:/Users/אביב/PycharmProjects/GitLeaksController`) | Path to the directory to scan for sensitive information leaks.    |
+| `--output_filename`                 | `output.json`                                                                       | Name of the file where scan results will be saved.                |
+| `--show_result`, `--no-show_result` | `True`                                                                              | Print the scan results directly to the terminal after completion. |
+| `--bonus`, `--no-bonus`             | `True`                                                                              | Include additional structured output using Pydantic models.       |
 
 ### **How to Use the Flags**
 

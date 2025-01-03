@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import pdb
 import shlex
 import subprocess
 import argparse
@@ -44,7 +45,9 @@ def run_gitleaks(directory_to_scan, output_file="output.json"):
     command = f"gitleaks detect --no-git --report-path {directory_to_scan}/output.json --source {directory_to_scan} "
     process = execute_command(command)
     if process.returncode == 0:
-        logger.info(f"Gitleaks scan completed successfully. Report saved at {report_path}")
+        logger.info(f"Gitleaks scan completed successfully. No leaks found. Report saved at {report_path}")
+    elif process.returncode == 1:
+        logger.warning(f"Gitleaks scan completed. Leaks detected. Report saved at {report_path}")
     else:
         logger.error(f"Error occurred during Gitleaks scan. Return code: {process.returncode}")
         if process.stderr:
@@ -125,16 +128,17 @@ def get_parser():
         '--show_result',
         dest='show_result',
         type=bool,
+        action=argparse.BooleanOptionalAction,
         default=True,
         help="Printing output directly to the terminal. Default: True"
     )
 
     parser.add_argument(
-        "--bonus",
+        '--bonus',
         dest='bonus',
-        type=bool,
+        action=argparse.BooleanOptionalAction,
         default=True,
-        help="Including the bonus section. Default: True"
+        help="Include the bonus section. Default: True"
     )
 
     return parser
@@ -159,6 +163,7 @@ def main(__args__):
 
     custom_output = parse_json_output(dirname, output_filename)
     if __args__.show_result:
+        print(f"__args__.bonus = {__args__.bonus}")
         show_results(custom_output, bonus=__args__.bonus)
 
 
