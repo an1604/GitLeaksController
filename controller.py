@@ -5,10 +5,23 @@ import pdb
 import shlex
 import subprocess
 import argparse
+import sys
 
 from bonus import LeakReport
 
 logger = logging.getLogger(__name__)
+
+
+def log_error_to_file(exit_code, error_message, error_file="error.json"):
+    """Log structured error to a JSON file."""
+    error_data = {
+        "exit_code": exit_code,
+        "error_message": error_message
+    }
+    with open(error_file, "w") as f:
+        json.dump(error_data, f, indent=4)
+    print(f"Error logged to {error_file}"
+          f"\n\n{error_message}")
 
 
 def redact(str_to_redact, items_to_redact):
@@ -23,23 +36,30 @@ def redact(str_to_redact, items_to_redact):
 def execute_command(command, items_to_redact=None, **kwargs):
     """ execute a command
     """
-    command_split = shlex.split(command)
-    redacted_command = redact(command, items_to_redact)
-    logger.debug(f'executing command: {redacted_command}')
-    process = subprocess.run(command_split, capture_output=True, text=True, **kwargs)
-    logger.debug(f"executed command: {redacted_command}' returncode: {process.returncode}")
-    if process.stdout:
-        logger.debug(f'stdout:\n{process.stdout}')
-    if process.stderr:
-        logger.debug(f'stderr:\n{process.stderr}')
-    return process
+    try:
+        command_split = shlex.split(command)
+        redacted_command = redact(command, items_to_redact)
+        logger.debug(f'executing command: {redacted_command}')
+        process = subprocess.run(command_split, capture_output=True, text=True, **kwargs)
+        logger.debug(f"executed command: {redacted_command}' returncode: {process.returncode}")
+        if process.stdout:
+            logger.debug(f'stdout:\n{process.stdout}')
+        if process.stderr:
+            logger.debug(f'stderr:\n{process.stderr}')
+        return process
+    except subprocess.CalledProcessError as e:
+        log_error_to_file(exit_code=e.returncode, error_message=str(e))
+        sys.exit(e.returncode)
 
 
 def run_gitleaks(directory_to_scan, output_file="output.json"):
     """Runs Gitleaks Locally/Docker with the specified directory and Docker image.
     """
     if not os.path.exists(directory_to_scan):
-        raise FileNotFoundError(f"The directory {directory_to_scan} does not exist.")
+        error_message = f"The directory {directory_to_scan} does not exist."
+        log_error_to_file(exit_code=2, error_message=error_message)
+        sys.exit(2)
+
     report_path = os.path.join(directory_to_scan, output_file)
 
     command = f"gitleaks detect --no-git --report-path {directory_to_scan}/output.json --source {directory_to_scan} "
@@ -52,6 +72,7 @@ def run_gitleaks(directory_to_scan, output_file="output.json"):
         logger.error(f"Error occurred during Gitleaks scan. Return code: {process.returncode}")
         if process.stderr:
             logger.error(f"Error: {process.stderr}")
+    return process
 
 
 def get_findings_from_file(output_filepath):
@@ -65,10 +86,13 @@ def get_findings_from_file(output_filepath):
         findings = []
         with open(output_filepath, 'r') as output_file:
             findings = json.load(output_file)
-
-        return findings['findings']
-    except:
         return findings
+    except FileNotFoundError:
+        log_error_to_file(exit_code=2, error_message=f"File not found: {output_filepath}")
+        sys.exit(2)
+    except json.JSONDecodeError as e:
+        log_error_to_file(exit_code=3, error_message=f"JSON decoding error: {str(e)}")
+        sys.exit(3)
 
 
 def parse_json_output(_current_dir_, __output_filename__):
@@ -147,24 +171,28 @@ def get_parser():
 def show_results(custom_output, bonus):
     if bonus:
         custom_output = [LeakReport(**finding_dict) for finding_dict in custom_output['findings']]
-        print("Here are all the pydantic models:")
-        for i, finding in enumerate(custom_output):
-            print(f"{i + 1}) {finding}")
+        print("\nHere are all the pydantic models:")
     else:
-        print("Here are all the JSON objects:")
-        print(custom_output)
+        custom_output = custom_output['findings']
+        print("\nHere are all the JSON objects:")
+
+    for i, finding in enumerate(custom_output):
+        print(f"{i + 1}) {finding}")
 
 
 def main(__args__):
-    dirname = __args__.dirname
-    output_filename = __args__.output_filename
+    try:
+        dirname = __args__.dirname
+        output_filename = __args__.output_filename
 
-    _process_ = run_gitleaks(dirname, output_filename)
+        _process_ = run_gitleaks(dirname, output_filename)
 
-    custom_output = parse_json_output(dirname, output_filename)
-    if __args__.show_result:
-        print(f"__args__.bonus = {__args__.bonus}")
-        show_results(custom_output, bonus=__args__.bonus)
+        custom_output = parse_json_output(dirname, output_filename)
+        if __args__.show_result:
+            show_results(custom_output, bonus=__args__.bonus)
+    except Exception as e:
+        log_error_to_file(exit_code=2, error_message=str(e))
+        sys.exit(2)
 
 
 if __name__ == '__main__':
