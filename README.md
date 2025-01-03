@@ -45,11 +45,11 @@ You can pass the flags as arguments.
 #### 1. Using option 1 (cloning the repo):
 
 ```bash
-docker run --rm -v "<LOCAL_DIRECTORY>:/code" gitleaks-controller:latest --dir /code --output_filename results.json --show_result True --bonus True
+docker run --rm -v "<LOCAL_DIRECTORY>:/code" gitleaks-controller:latest --dir /code --output_filename results.json --bonus --show_result
 ```
 
 #### 2. Using option 2 (optional, pulling from Dockerhub):
 
 ```bash
-docker run --rm -v <LOCAL_DIRECTORY_TO_SCAN>:/code avivnat13/gitleaks-controller:latest --dir /code --output_filename results.json --show_result True --bonus True
+docker run --rm -v "<LOCAL_DIRECTORY_TO_SCAN>:/code" avivnat13/gitleaks-controller:latest --dir /code --output_filename results.json --bonus --show_result
 ```
