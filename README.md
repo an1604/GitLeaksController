@@ -53,3 +53,12 @@ docker run --rm -v "<LOCAL_DIRECTORY>:/code" gitleaks-controller:latest --dir /c
 ```bash
 docker run --rm -v "<LOCAL_DIRECTORY_TO_SCAN>:/code" avivnat13/gitleaks-controller:latest --dir /code --output_filename results.json --bonus --show_result
 ```
+
+
+## Demo Video
+
+<video controls width="600">
+  <source src="https://raw.githubusercontent.com/an1604/GitLeaksController/main/Example.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
