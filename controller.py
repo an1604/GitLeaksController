@@ -86,7 +86,8 @@ def get_findings_from_output_file(output_filepath):
         sys.exit(3)
 
 
-def parse_json_output(_current_dir_, __output_filename__):
+def parse_json_output(_current_dir_, __output_filename__,
+                      save_customize_output=True):
     """ given the output JSON file, this method manipulates the output as requested in the assignment """
     output_filepath = os.path.join(_current_dir_, __output_filename__)
     findings = get_findings_from_output_file(output_filepath)
@@ -104,6 +105,11 @@ def parse_json_output(_current_dir_, __output_filename__):
             "description": desc
         }
         output['findings'].append(finding_dict)
+    if save_customize_output:  # by default, the custom output is saved inside the container
+        __custom_output_filepath__ = os.path.join(_current_dir_, "custom_output.json")
+        with open(__custom_output_filepath__, 'w') as f:
+            json.dump(output, f, indent=4)
+
     return output
 
 
