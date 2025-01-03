@@ -20,8 +20,8 @@ def log_error_to_file(exit_code, error_message, error_file="error.json"):
     }
     with open(error_file, "w") as f:
         json.dump(error_data, f, indent=4)
-    print(f"Error logged to {error_file}"
-          f"\n\n{error_message}")
+    print(f"Error logged to {error_file}")
+    print(error_data)
 
 
 def redact(str_to_redact, items_to_redact):
