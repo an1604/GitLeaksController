@@ -11,6 +11,23 @@ from bonus import LeakReport
 logger = logging.getLogger(__name__)
 
 
+class MyCustomArgumentParser(argparse.ArgumentParser):
+    """Custom ArgumentParser to handle unrecognized arguments."""
+
+    def error(self, message):
+        error_message = f"Gitleaks scan failed: {message}"
+        log_error_to_file(exit_code=2, error_message=error_message)
+        sys.exit(2)
+
+
+def validate_directory(directory):
+    if not os.path.exists(directory):
+        print(f"Error: The directory '{directory}' does not exist inside the container.")
+        error_message = f"The directory {directory} does not exist."
+        log_error_to_file(exit_code=2, error_message=error_message)
+        sys.exit(2)
+
+
 def log_error_to_file(exit_code, error_message, error_file="error.json"):
     """log structured error to a JSON file (bonus section)"""
     error_data = {
@@ -115,8 +132,8 @@ def parse_json_output(_current_dir_, __output_filename__,
 
 def get_parser():
     """ returns an argument parser for the gitleaks wrapper script """
-    parser = argparse.ArgumentParser(
-        description='A Python script that wraps the gitleaks tool to scan a given directory for leaks.'
+    parser = MyCustomArgumentParser(
+        description='A Python script that wraps the Gitleaks tool to scan a given directory for leaks.'
     )
     default_dir = os.getcwd()
 
@@ -185,4 +202,5 @@ def main(__args__):
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
+    validate_directory(args.dirname)
     main(args)
