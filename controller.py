@@ -6,7 +6,7 @@ import subprocess
 import argparse
 import sys
 
-from bonus import LeakReport
+from bonus import LeakReport, log_error_to_file
 
 logger = logging.getLogger(__name__)
 
@@ -26,18 +26,6 @@ def validate_directory(directory):
         error_message = f"The directory {directory} does not exist."
         log_error_to_file(exit_code=2, error_message=error_message)
         sys.exit(2)
-
-
-def log_error_to_file(exit_code, error_message, error_file="error.json"):
-    """log structured error to a JSON file (bonus section)"""
-    error_data = {
-        "exit_code": exit_code,
-        "error_message": error_message
-    }
-    with open(error_file, "w") as f:
-        json.dump(error_data, f, indent=4)
-    print(f"Error logged to {error_file}")
-    print(error_data)
 
 
 def redact(str_to_redact, items_to_redact):
@@ -66,7 +54,7 @@ def execute_command(command, items_to_redact=None, **kwargs):
         sys.exit(e.returncode)
 
 
-def run_gitleaks(directory_to_scan, output_file="output.json"):
+def run_gitleaks(directory_to_scan, output_file):
     if not os.path.exists(directory_to_scan):
         error_message = f"The directory {directory_to_scan} does not exist."
         log_error_to_file(exit_code=2, error_message=error_message)
@@ -185,10 +173,23 @@ def show_results(custom_output, bonus):
         print(f"{i + 1}) {finding}")
 
 
+def clean_outputfile(output_filename):
+    try:
+        with open(output_filename, 'w') as file:
+            file.write('')
+        print(f"Successfully cleaned the output file: {output_filename}")
+    except Exception as e:
+        error_message = f"Failed to clean the output file: {output_filename}. Error: {str(e)}"
+        log_error_to_file(exit_code=2, error_message=error_message)
+
+
 def main(__args__):
     try:
         dirname = __args__.dirname
         output_filename = __args__.output_filename
+
+        clean_outputfile(os.path.join(dirname,output_filename))
+
         _process_ = run_gitleaks(dirname, output_filename)
 
         custom_output = parse_json_output(dirname,
@@ -202,5 +203,4 @@ def main(__args__):
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
-    validate_directory(args.dirname)
     main(args)
