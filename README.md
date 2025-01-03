@@ -55,10 +55,4 @@ docker run --rm -v "<LOCAL_DIRECTORY_TO_SCAN>:/code" avivnat13/gitleaks-controll
 ```
 
 
-## Demo Video
-
-<video controls width="600">
-  <source src="https://raw.githubusercontent.com/an1604/GitLeaksController/main/Example.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
 
