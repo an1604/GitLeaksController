@@ -12,7 +12,7 @@ provides structured outputs for easy integration with other tools.
 git clone https://github.com/an1604/GitLeaksController.git
 cd GitLeaksController
 docker build -t gitleaks-controller:latest . 
-docker run --rm -v "<LOCAL_DIRECTORY>:/code/<CHOOSE_DIRECTORY_NAME>" gitleaks-controller:latest --dir /code/<CHOOSE_DIRECTORY_NAME> 
+docker run --rm -v "<LOCAL_DIRECTORY_TO_SCAN>:/code/<CHOOSE_DIRECTORY_NAME>" gitleaks-controller:latest --dir /code/<CHOOSE_DIRECTORY_NAME> 
 ```
 
 ### 2. Optional: Run Using Prebuilt Docker Image from Docker Hub
@@ -45,7 +45,7 @@ You can pass the flags as arguments.
 #### 1. Using option 1 (cloning the repo):
 
 ```bash
-docker run --rm -v "<LOCAL_DIRECTORY>:/code" gitleaks-controller:latest --dir /code --output_filename results.json --bonus --show_result
+docker run --rm -v "<LOCAL_DIRECTORY_TO_SCAN>:/code" gitleaks-controller:latest --dir /code --output_filename results.json --bonus --show_result
 ```
 
 #### 2. Using option 2 (optional, pulling from Dockerhub):
