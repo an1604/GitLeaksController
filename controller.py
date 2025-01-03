@@ -8,6 +8,16 @@ import sys
 
 from bonus import LeakReport, log_error_to_file
 
+# Configure logging
+LOG_FILE = "runtime_logs.log"
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(LOG_FILE, mode="w")
+    ]
+)
 logger = logging.getLogger(__name__)
 
 
@@ -20,30 +30,11 @@ class MyCustomArgumentParser(argparse.ArgumentParser):
         sys.exit(2)
 
 
-def validate_directory(directory):
-    if not os.path.exists(directory):
-        print(f"Error: The directory '{directory}' does not exist inside the container.")
-        error_message = f"The directory {directory} does not exist."
-        log_error_to_file(exit_code=2, error_message=error_message)
-        sys.exit(2)
-
-
-def redact(str_to_redact, items_to_redact):
-    """ return str_to_redact with items redacted"""
-    if items_to_redact:
-        for item_to_redact in items_to_redact:
-            str_to_redact = str_to_redact.replace(item_to_redact, '***')
-    return str_to_redact
-
-
 def execute_command(command, items_to_redact=None, **kwargs):
     """ execute a Gitleaks command in a subprocess """
     try:
         command_split = shlex.split(command)
-        redacted_command = redact(command, items_to_redact)
-        logger.debug(f'executing command: {redacted_command}')
         process = subprocess.run(command_split, capture_output=True, text=True, **kwargs)
-        logger.debug(f"executed command: {redacted_command}' returncode: {process.returncode}")
         if process.stdout:
             logger.debug(f'stdout:\n{process.stdout}')
         if process.stderr:
@@ -188,7 +179,7 @@ def main(__args__):
         dirname = __args__.dirname
         output_filename = __args__.output_filename
 
-        clean_outputfile(os.path.join(dirname,output_filename))
+        clean_outputfile(os.path.join(dirname, output_filename))
 
         _process_ = run_gitleaks(dirname, output_filename)
 
