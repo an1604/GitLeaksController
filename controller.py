@@ -11,12 +11,6 @@ from bonus import LeakReport
 logger = logging.getLogger(__name__)
 
 
-def validate_directory(directory):
-    if not os.path.exists(directory):
-        print(f"Error: The directory '{directory}' does not exist.")
-        sys.exit(1)
-
-
 def log_error_to_file(exit_code, error_message, error_file="error.json"):
     """log structured error to a JSON file (bonus section)"""
     error_data = {
