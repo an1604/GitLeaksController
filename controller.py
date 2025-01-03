@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import pdb
 import shlex
 import subprocess
 import argparse
@@ -13,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def log_error_to_file(exit_code, error_message, error_file="error.json"):
-    """Log structured error to a JSON file."""
+    """log structured error to a JSON file (bonus section)"""
     error_data = {
         "exit_code": exit_code,
         "error_message": error_message
@@ -25,8 +24,7 @@ def log_error_to_file(exit_code, error_message, error_file="error.json"):
 
 
 def redact(str_to_redact, items_to_redact):
-    """ return str_to_redact with items redacted
-    """
+    """ return str_to_redact with items redacted"""
     if items_to_redact:
         for item_to_redact in items_to_redact:
             str_to_redact = str_to_redact.replace(item_to_redact, '***')
@@ -34,8 +32,7 @@ def redact(str_to_redact, items_to_redact):
 
 
 def execute_command(command, items_to_redact=None, **kwargs):
-    """ execute a command
-    """
+    """ execute a Gitleaks command in a subprocess """
     try:
         command_split = shlex.split(command)
         redacted_command = redact(command, items_to_redact)
@@ -53,16 +50,14 @@ def execute_command(command, items_to_redact=None, **kwargs):
 
 
 def run_gitleaks(directory_to_scan, output_file="output.json"):
-    """Runs Gitleaks Locally/Docker with the specified directory and Docker image.
-    """
     if not os.path.exists(directory_to_scan):
         error_message = f"The directory {directory_to_scan} does not exist."
         log_error_to_file(exit_code=2, error_message=error_message)
         sys.exit(2)
 
     report_path = os.path.join(directory_to_scan, output_file)
+    command = f"gitleaks detect --no-git --report-path {directory_to_scan}/output.json --source {directory_to_scan}"
 
-    command = f"gitleaks detect --no-git --report-path {directory_to_scan}/output.json --source {directory_to_scan} "
     process = execute_command(command)
     if process.returncode == 0:
         logger.info(f"Gitleaks scan completed successfully. No leaks found. Report saved at {report_path}")
@@ -72,16 +67,12 @@ def run_gitleaks(directory_to_scan, output_file="output.json"):
         logger.error(f"Error occurred during Gitleaks scan. Return code: {process.returncode}")
         if process.stderr:
             logger.error(f"Error: {process.stderr}")
+            log_error_to_file(exit_code=process.returncode, error_message=process.stderr)
     return process
 
 
 def get_findings_from_file(output_filepath):
-    """
-    parse the original Gitleaks JSON output file and return it.
-
-    :param output_filepath:
-    :return: an array of dictionaries
-    """
+    """ parse the original Gitleaks JSON output file and return it """
     try:
         findings = []
         with open(output_filepath, 'r') as output_file:
@@ -96,6 +87,7 @@ def get_findings_from_file(output_filepath):
 
 
 def parse_json_output(_current_dir_, __output_filename__):
+    """ given the output JSON file, this method manipulates the output as requested in the assignment """
     output_filepath = os.path.join(_current_dir_, __output_filename__)
     __custom_output_filepath__ = os.path.join(_current_dir_, "custom_output.json")
 
@@ -118,15 +110,7 @@ def parse_json_output(_current_dir_, __output_filename__):
 
 
 def get_parser():
-    """
-    Returns an argument parser for the gitleaks wrapper script.
-
-    The script scans a given directory for leaks using gitleaks
-    and outputs results to a specified JSON file.
-
-    Returns:
-        argparse.ArgumentParser: Configured argument parser.
-    """
+    """ returns an argument parser for the gitleaks wrapper script """
     parser = argparse.ArgumentParser(
         description='A Python script that wraps the gitleaks tool to scan a given directory for leaks.'
     )
@@ -169,7 +153,7 @@ def get_parser():
 
 
 def show_results(custom_output, bonus):
-    if bonus:
+    if bonus:  # converting the JSONs into pydantic objects of the bonus flag is on
         custom_output = [LeakReport(**finding_dict) for finding_dict in custom_output['findings']]
         print("\nHere are all the pydantic models:")
     else:
@@ -184,10 +168,10 @@ def main(__args__):
     try:
         dirname = __args__.dirname
         output_filename = __args__.output_filename
-
         _process_ = run_gitleaks(dirname, output_filename)
 
-        custom_output = parse_json_output(dirname, output_filename)
+        custom_output = parse_json_output(dirname,
+                                          output_filename)  # will hold the manipulated output in the different format
         if __args__.show_result:
             show_results(custom_output, bonus=__args__.bonus)
     except Exception as e:
