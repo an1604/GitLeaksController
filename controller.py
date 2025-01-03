@@ -11,6 +11,12 @@ from bonus import LeakReport
 logger = logging.getLogger(__name__)
 
 
+def validate_directory(directory):
+    if not os.path.exists(directory):
+        print(f"Error: The directory '{directory}' does not exist.")
+        sys.exit(1)
+
+
 def log_error_to_file(exit_code, error_message, error_file="error.json"):
     """log structured error to a JSON file (bonus section)"""
     error_data = {
@@ -71,7 +77,7 @@ def run_gitleaks(directory_to_scan, output_file="output.json"):
     return process
 
 
-def get_findings_from_file(output_filepath):
+def get_findings_from_output_file(output_filepath):
     """ parse the original Gitleaks JSON output file and return it """
     try:
         findings = []
@@ -89,9 +95,7 @@ def get_findings_from_file(output_filepath):
 def parse_json_output(_current_dir_, __output_filename__):
     """ given the output JSON file, this method manipulates the output as requested in the assignment """
     output_filepath = os.path.join(_current_dir_, __output_filename__)
-    __custom_output_filepath__ = os.path.join(_current_dir_, "custom_output.json")
-
-    findings = get_findings_from_file(output_filepath)
+    findings = get_findings_from_output_file(output_filepath)
 
     output = {
         'findings': []
