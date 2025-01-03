@@ -28,4 +28,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: yourusername/gitleaks-controller:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/gitleaks-controller:latest
