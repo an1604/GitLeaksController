@@ -155,7 +155,7 @@ def main(__args__):
     dirname = __args__.dirname
     output_filename = __args__.output_filename
 
-    _process_ = run_gitleaks(dirname)
+    _process_ = run_gitleaks(dirname, output_filename)
 
     custom_output = parse_json_output(dirname, output_filename)
     if __args__.show_result:
