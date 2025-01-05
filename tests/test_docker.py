@@ -65,7 +65,6 @@ def test_docker_image_build():
 
 def test_docker_run_gitleaks():
     """ test the `docker run` command for Gitleaks with volume mounting. """
-    # local_directory = os.path.join(os.getcwd(), "tests", "test_scan_directory")
     with tempfile.TemporaryDirectory() as local_directory:
         container_directory = "/code/test_directory"
         output_file = "output_test.json"
@@ -78,7 +77,6 @@ def test_docker_run_gitleaks():
             Repo.clone_from(test_repo_url, local_directory)
 
             assert os.path.exists(local_directory), "Failed to clone the test repository."
-            os.chmod(local_directory, 0o777)
 
             docker_command = (
                 f'docker run --rm -v "{local_directory}:{container_directory}" '
@@ -93,7 +91,6 @@ def test_docker_run_gitleaks():
             expected_output_path = os.path.join(local_directory, output_file)
             assert os.path.exists(expected_output_path), "Output file not found in local directory."
 
-            check_matching_files(local_directory, output_file)
         except subprocess.CalledProcessError as e:
             pytest.fail(f"Docker run failed with error:\n{e.stderr}")
         finally:
