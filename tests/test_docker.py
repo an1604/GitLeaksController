@@ -20,26 +20,6 @@ def remove_readonly(func, path, _):
     func(path)
 
 
-def test_docker_image_build():
-    """ test if the Docker image builds successfully."""
-    image_name = "gitleaks-controller:latest"
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    dockerfile_path = os.path.join(project_root, "Dockerfile")
-
-    assert os.path.exists(dockerfile_path), f"Dockerfile not found at {dockerfile_path}"
-
-    build_command = f"docker build -t {image_name} ."
-    try:
-        os.chdir(project_root)  # Changing the directory to be the same as the Dockerfile
-        result = subprocess.run(
-            build_command, shell=True, text=True, capture_output=True, check=True
-        )
-        assert result.returncode == 0, "Docker build failed"
-        print(f"Docker build succeeded. Output:\n{result.stdout}")
-    except subprocess.CalledProcessError as e:
-        pytest.fail(f"Docker build failed with error:\n{e.stderr}")
-
-
 def check_matching_files(local_directory, output_file):
     """ checks the output from the Gitleaks' scan """
     # Step 1: check the existence of the original output file and if its match the output of the function
@@ -60,6 +40,26 @@ def check_matching_files(local_directory, output_file):
         expected_manipulated_output = json.load(manipulated_output_file)
 
     assert manipulated_output == expected_manipulated_output, "Mismatch between manipulated output and expected manipulated output."
+
+
+def test_docker_image_build():
+    """ test if the Docker image builds successfully."""
+    image_name = "gitleaks-controller:latest"
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    dockerfile_path = os.path.join(project_root, "Dockerfile")
+
+    assert os.path.exists(dockerfile_path), f"Dockerfile not found at {dockerfile_path}"
+
+    build_command = f"docker build -t {image_name} ."
+    try:
+        os.chdir(project_root)  # Changing the directory to be the same as the Dockerfile
+        result = subprocess.run(
+            build_command, shell=True, text=True, capture_output=True, check=True, encoding="utf-8"
+        )
+        assert result.returncode == 0, "Docker build failed"
+        print(f"Docker build succeeded. Output:\n{result.stdout}")
+    except subprocess.CalledProcessError as e:
+        pytest.fail(f"Docker build failed with error:\n{e.stderr}")
 
 
 def test_docker_run_gitleaks():
