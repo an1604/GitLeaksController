@@ -1,5 +1,4 @@
 import json
-import pdb
 import shutil
 import subprocess
 import pytest
@@ -51,16 +50,29 @@ def test_run_gitleaks():
     shutil.rmtree(directory_to_scan)  # remove the file and the directory
 
 
+# TODO: TEST AT HOME!!
 def test_manipulated_output():
-    """ tests the manipulated output using the method """
-    real_outputfilename = "tests/output_test.json"
-    manipulated_outputfilename = "tests/custom_output_test.json"
+    """ tests the manipulated output using the method parse_json_output"""
+    real_output_filename = "output_test.json"
+    manipulated_output_filename = "custom_output_test.json"
+    tests_dirpath = os.path.join(os.getcwd(), 'tests')
+    real_output_filepath = os.path.join(tests_dirpath, real_output_filename)
+    manipulated_output_filepath = os.path.join(tests_dirpath, manipulated_output_filename)
 
-    # Checks if the result equal to the output form the method
-    real_output = get_findings_from_output_file(real_outputfilename)
-    with open(real_outputfilename, 'r') as real_outputfile:
-        assert real_output == json.load(real_outputfile)
-
-    # Step 1: apply the method to get manipulated_output (dictionary)
-    manipulated_output = parse_json_output()
-    # Step 2: asserting the manipulated_output with the content from the manipulated_outputfilename
+    # Step 1: Ensure the test files exist
+    assert os.path.exists(real_output_filepath), f"Test file not found: {real_output_filepath}"
+    assert os.path.exists(manipulated_output_filepath), f"Test file not found: {manipulated_output_filepath}"
+    # Step 2: Load real output and compare with `get_findings_from_output_file`
+    real_output = get_findings_from_output_file(real_output_filepath)
+    with open(real_output_filepath, 'r') as real_output_file:
+        expected_real_output = json.load(real_output_file)
+    assert real_output == expected_real_output, "Mismatch between real output and expected real output."
+    # Step 3: Generate manipulated output using `parse_json_output`
+    manipulated_output = parse_json_output(
+        _current_dir_=tests_dirpath,
+        __output_filename__=real_output_filename
+    )
+    # Step 4: Compare manipulated output with expected manipulated output
+    with open(manipulated_output_filepath, 'r') as manipulated_output_file:
+        expected_manipulated_output = json.load(manipulated_output_file)
+    assert manipulated_output == expected_manipulated_output, "Mismatch between manipulated output and expected manipulated output."
