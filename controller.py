@@ -105,9 +105,6 @@ def parse_json_output(_current_dir_, __output_filename__,
     if save_customize_output:  # by default, the custom output is saved inside the container
         __custom_output_filepath__ = os.path.join(_current_dir_, "custom_output_test.json")
         with open(__custom_output_filepath__, 'w') as f:
-            if not os.access(__custom_output_filepath__, os.W_OK):
-                # editing file permissions if necessary
-                os.chmod(__custom_output_filepath__, stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH)
             json.dump(output, f, indent=4)
 
     return output
