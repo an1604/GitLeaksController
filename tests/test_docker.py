@@ -78,6 +78,7 @@ def test_docker_run_gitleaks():
             Repo.clone_from(test_repo_url, local_directory)
 
             assert os.path.exists(local_directory), "Failed to clone the test repository."
+            os.chmod(local_directory, 0o777)
 
             docker_command = (
                 f'docker run --rm -v "{local_directory}:{container_directory}" '
