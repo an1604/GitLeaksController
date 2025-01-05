@@ -9,7 +9,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from controller import execute_command, run_gitleaks, parse_json_output, get_findings_from_output_file
+from controller import execute_command, parse_json_output, get_findings_from_output_file
 
 
 def test_execute_command_success():
