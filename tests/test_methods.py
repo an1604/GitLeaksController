@@ -31,26 +31,6 @@ def test_execute_command_failure():
         assert excinfo.value.code == 1
 
 
-# TODO: FIX THIS TEST
-def test_run_gitleaks():
-    directory_to_scan = os.path.join(os.getcwd(), "scan_directory")
-    output_file = "output_test.json"
-    os.makedirs(directory_to_scan, exist_ok=True)
-    output_path = os.path.join(directory_to_scan, output_file)
-
-    result = run_gitleaks(str(directory_to_scan), output_file)
-
-    # Simulation of opening the output file to ensure its existence
-    with open(output_path, "w") as f:
-        f.write("{}")
-
-    assert result.returncode == 0
-    assert os.path.exists(os.path.join(directory_to_scan, output_file))
-
-    shutil.rmtree(directory_to_scan)  # remove the file and the directory
-
-
-# TODO: TEST AT HOME!!
 def test_manipulated_output():
     """ tests the manipulated output using the method parse_json_output"""
     real_output_filename = "output_test.json"

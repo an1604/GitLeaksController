@@ -1,0 +1,49 @@
+{
+    "findings": [
+        {
+            "filename": "/code/fake-public-secrets/fake-public-secrets/.aws/credentials",
+            "line_range": "2-2",
+            "description": "AWS"
+        },
+        {
+            "filename": "/code/fake-public-secrets/fake-public-secrets/.travis.yml",
+            "line_range": "2-2",
+            "description": "AWS"
+        },
+        {
+            "filename": "/code/fake-public-secrets/fake-public-secrets/BARE-SECRETS",
+            "line_range": "3-3",
+            "description": "AWS"
+        },
+        {
+            "filename": "/code/fake-public-secrets/fake-public-secrets/BARE-SECRETS",
+            "line_range": "12-12",
+            "description": "PKCS8 private key"
+        },
+        {
+            "filename": "/code/fake-public-secrets/fake-public-secrets/README.md",
+            "line_range": "8-8",
+            "description": "AWS"
+        },
+        {
+            "filename": "/code/fake-public-secrets/fake-public-secrets/README.md",
+            "line_range": "13-13",
+            "description": "AWS"
+        },
+        {
+            "filename": "/code/fake-public-secrets/fake-public-secrets/bad-vars.tf",
+            "line_range": "2-2",
+            "description": "AWS"
+        },
+        {
+            "filename": "/code/fake-public-secrets/fake-public-secrets/bad-vars.tf",
+            "line_range": "11-11",
+            "description": "AWS"
+        },
+        {
+            "filename": "/code/fake-public-secrets/fake-public-secrets/bad.tfvars",
+            "line_range": "2-2",
+            "description": "AWS"
+        }
+    ]
+}
