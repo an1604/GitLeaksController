@@ -2,6 +2,7 @@ import json
 import shutil
 import subprocess
 import sys
+import tempfile
 
 import pytest
 import os
@@ -64,35 +65,36 @@ def test_docker_image_build():
 
 def test_docker_run_gitleaks():
     """ test the `docker run` command for Gitleaks with volume mounting. """
-    local_directory = os.path.join(os.getcwd(), "tests", "test_scan_directory")
-    container_directory = "/code/test_directory"
-    output_file = "output_test.json"
-    image_name = "gitleaks-controller:latest"
-    test_repo_url = "https://github.com/atrull/fake-public-secrets"
+    # local_directory = os.path.join(os.getcwd(), "tests", "test_scan_directory")
+    with tempfile.TemporaryDirectory() as local_directory:
+        container_directory = "/code/test_directory"
+        output_file = "output_test.json"
+        image_name = "gitleaks-controller:latest"
+        test_repo_url = "https://github.com/atrull/fake-public-secrets"
 
-    try:
-        if os.path.exists(local_directory):
-            shutil.rmtree(local_directory, onerror=remove_readonly)
-        Repo.clone_from(test_repo_url, local_directory)
+        try:
+            if os.path.exists(local_directory):
+                shutil.rmtree(local_directory, onerror=remove_readonly)
+            Repo.clone_from(test_repo_url, local_directory)
 
-        assert os.path.exists(local_directory), "Failed to clone the test repository."
+            assert os.path.exists(local_directory), "Failed to clone the test repository."
 
-        docker_command = (
-            f'docker run --rm -v "{local_directory}:{container_directory}" '
-            f'{image_name} --dir {container_directory}'
-        )
-        result = subprocess.run(
-            docker_command, shell=True, text=True, capture_output=True, check=True
-        )
+            docker_command = (
+                f'docker run --rm -v "{local_directory}:{container_directory}" '
+                f'{image_name} --dir {container_directory}'
+            )
+            result = subprocess.run(
+                docker_command, shell=True, text=True, capture_output=True, check=True
+            )
 
-        assert result.returncode <= 1, (f"Docker run failed with error: {result.stderr}"
-                                        f"\n\nreturncode: {result.returncode}")
-        expected_output_path = os.path.join(local_directory, output_file)
-        assert os.path.exists(expected_output_path), "Output file not found in local directory."
+            assert result.returncode <= 1, (f"Docker run failed with error: {result.stderr}"
+                                            f"\n\nreturncode: {result.returncode}")
+            expected_output_path = os.path.join(local_directory, output_file)
+            assert os.path.exists(expected_output_path), "Output file not found in local directory."
 
-        check_matching_files(local_directory, output_file)
-    except subprocess.CalledProcessError as e:
-        pytest.fail(f"Docker run failed with error:\n{e.stderr}")
-    finally:
-        if os.path.exists(local_directory):
-            shutil.rmtree(local_directory, onerror=remove_readonly)
+            check_matching_files(local_directory, output_file)
+        except subprocess.CalledProcessError as e:
+            pytest.fail(f"Docker run failed with error:\n{e.stderr}")
+        finally:
+            if os.path.exists(local_directory):
+                shutil.rmtree(local_directory, onerror=remove_readonly)
