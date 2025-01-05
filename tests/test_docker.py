@@ -10,37 +10,10 @@ import os
 from git import Repo
 import stat
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from controller import parse_json_output, get_findings_from_output_file
-
-
 def remove_readonly(func, path, _):
     """ clear the read-only attribute and retry """
     os.chmod(path, stat.S_IWRITE)
     func(path)
-
-
-def check_matching_files(local_directory, output_file):
-    """ checks the output from the Gitleaks' scan """
-    # Step 1: check the existence of the original output file and if its match the output of the function
-    real_output_filepath = os.path.join(local_directory, output_file)
-    real_output = get_findings_from_output_file(real_output_filepath)
-    with open(real_output_filepath, 'r') as real_output_file:
-        expected_real_output = json.load(real_output_file)
-    assert real_output == expected_real_output, "Mismatch between real output and expected real output."
-
-    # Step 2: check the manipulated JSON file from the scan
-    custom_output_test_filename = "custom_output_test.json"
-    manipulated_output_filepath = os.path.join(local_directory, custom_output_test_filename)
-    manipulated_output = parse_json_output(
-        _current_dir_=local_directory,
-        __output_filename__=output_file
-    )
-    with open(manipulated_output_filepath, 'r') as manipulated_output_file:
-        expected_manipulated_output = json.load(manipulated_output_file)
-
-    assert manipulated_output == expected_manipulated_output, "Mismatch between manipulated output and expected manipulated output."
 
 
 def test_docker_image_build():
