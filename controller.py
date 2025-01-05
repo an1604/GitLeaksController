@@ -52,7 +52,7 @@ def run_gitleaks(directory_to_scan, output_file):
         sys.exit(2)
 
     report_path = os.path.join(directory_to_scan, output_file)
-    command = f"gitleaks detect --no-git --report-path {directory_to_scan}/output.json --source {directory_to_scan}"
+    command = f"gitleaks detect --no-git --report-path {directory_to_scan}/output_test.json --source {directory_to_scan}"
 
     process = execute_command(command)
     if process.returncode == 0:
@@ -102,7 +102,7 @@ def parse_json_output(_current_dir_, __output_filename__,
         }
         output['findings'].append(finding_dict)
     if save_customize_output:  # by default, the custom output is saved inside the container
-        __custom_output_filepath__ = os.path.join(_current_dir_, "custom_output.json")
+        __custom_output_filepath__ = os.path.join(_current_dir_, "custom_output_test.json")
         with open(__custom_output_filepath__, 'w') as f:
             json.dump(output, f, indent=4)
 
@@ -128,8 +128,8 @@ def get_parser():
         '--output_filename',
         dest='output_filename',
         type=str,
-        default="output.json",
-        help="Output filename for scan results. Default: 'output.json'"
+        default="output_test.json",
+        help="Output filename for scan results. Default: 'output_test.json'"
     )
 
     parser.add_argument(
