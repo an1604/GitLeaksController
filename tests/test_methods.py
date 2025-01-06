@@ -14,6 +14,7 @@ import controller
 
 
 def test_execute_command_success():
+    """test the case where the process returns success on statuscode."""
     command = "echo Hello, World!"
     with patch('subprocess.run') as mock_run:
         mock_run.return_value = subprocess.CompletedProcess(args=command, returncode=0, stdout="Hello, World!",
@@ -24,6 +25,7 @@ def test_execute_command_success():
 
 
 def test_execute_command_failure():
+    """test the case where the process returns failure on statuscode."""
     command = "exit 1"
     with patch('subprocess.run') as mock_run:
         mock_run.side_effect = subprocess.CalledProcessError(returncode=1, cmd=command, output="Error")
@@ -53,12 +55,14 @@ def test_gitleaks_on_system():
 
 
 def test_run_gitleaks_directory_not_found():
+    """trying to pass an invalid directory to run_gitleaks() to see the result"""
     with pytest.raises(SystemExit) as excinfo:
         controller.run_gitleaks("non_existent_directory", "output_test.json")
     assert excinfo.value.code == 2
 
 
 def test_parse_json_output_missing_file():
+    """ test the case where the JSON output file is missing """
     with pytest.raises(SystemExit) as excinfo:
         controller.parse_json_output("non_existent_directory", "non_existent_file.json")
     assert excinfo.value.code == 2
@@ -92,7 +96,7 @@ def test_manipulated_output():
 
 
 def test_get_findings_from_output_file_json_decode_error():
-    """Test the case where the JSON file has invalid content."""
+    """ test the case where the JSON file has invalid content """
     invalid_json_content = "{ invalid json }"  # Simulating a broken JSON file
     mock_filepath = "/fake/path/output.json"
 
@@ -109,6 +113,7 @@ def test_get_findings_from_output_file_json_decode_error():
 
 
 def test_get_parser_defaults():
+    """tests the parser on the default args"""
     parser = controller.get_parser()
     args = parser.parse_args([])
 
@@ -119,6 +124,7 @@ def test_get_parser_defaults():
 
 
 def test_get_parser_custom_args():
+    """tests the parser on custom args"""
     parser = controller.get_parser()
     args = parser.parse_args([
         '--dir', '/custom/directory',
@@ -134,6 +140,7 @@ def test_get_parser_custom_args():
 
 
 def test_get_parser_invalid_args():
+    """tests the case where passing invalid args to the parser """
     parser = controller.get_parser()
     with pytest.raises(SystemExit) as excinfo:
         parser.parse_args(["--invalid-arg"])
@@ -141,6 +148,9 @@ def test_get_parser_invalid_args():
 
 
 def test_show_results_with_bonus():
+    """tests the cases where we want to print the results to the console with the bonus
+    flag set to true (i.e., see the pydantic models)
+    """
     tests_dirpath = os.path.join(os.getcwd(), 'tests')
     real_output_filename = 'output_test.json'
 
@@ -158,6 +168,8 @@ def test_show_results_with_bonus():
 
 
 def test_show_results_without_bonus():
+    """tests the cases where we want to print the results to the console with
+    the bonus flag set to false (i.e., see the result as the manipulated JSON)"""
     custom_output = {
         'findings': [{'filename': 'test.py', 'line_range': '1-2', 'description': 'Sensitive info'}]
     }
@@ -218,6 +230,7 @@ def test_log_error_to_file_with_mocking():
 
 
 def test_main_success():
+    """testing the main method """
     mock_args = MagicMock()
     mock_args.dirname = "/fake/dir"
     mock_args.output_filename = "output.json"
@@ -238,6 +251,7 @@ def test_main_success():
 
 
 def test_main_clean_outputfile_exception():
+    """if the outputfile isn't cleared properly, we want to see and test it """
     mock_args = MagicMock()
     mock_args.dirname = "/fake/dir"
     mock_args.output_filename = "output.json"
