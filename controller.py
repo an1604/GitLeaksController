@@ -62,15 +62,16 @@ def run_gitleaks(directory_to_scan, output_file):
     command = f"gitleaks detect --no-git --report-path {directory_to_scan}/output_test.json --source {directory_to_scan}"
     try:
         process = execute_command(command)
-        if process.returncode == 0:
-            logger.info(f"Gitleaks scan completed successfully. No leaks found. Report saved at {report_path}")
-        elif process.returncode == 1:
-            logger.warning(f"Gitleaks scan completed. Leaks detected. Report saved at {report_path}")
-        else:
-            logger.error(f"Error occurred during Gitleaks scan. Return code: {process.returncode}")
-            if process.stderr:
-                logger.error(f"Error: {process.stderr}")
-                log_error_to_file(exit_code=process.returncode, error_message=process.stderr)
+        if process is not None:
+            if process.returncode == 0:
+                logger.info(f"Gitleaks scan completed successfully. No leaks found. Report saved at {report_path}")
+            elif process.returncode == 1:
+                logger.warning(f"Gitleaks scan completed. Leaks detected. Report saved at {report_path}")
+            else:
+                logger.error(f"Error occurred during Gitleaks scan. Return code: {process.returncode}")
+                if process.stderr:
+                    logger.error(f"Error: {process.stderr}")
+                    log_error_to_file(exit_code=process.returncode, error_message=process.stderr)
         return process
     except FileNotFoundError as e:
         log_error_to_file(

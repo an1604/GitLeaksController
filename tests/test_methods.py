@@ -174,3 +174,20 @@ def test_main_clean_outputfile_exception():
 
         mock_log_error.assert_called_once_with(exit_code=2, error_message="Clean error")
         mock_exit.assert_called_once_with(2)
+
+
+def test_get_findings_from_corrupted_file():
+    """ test handling of corrupted JSON files """
+    corrupted_file_path = "corrupted_output.json"
+    invalid_json = "INVALID_JSON"  # Simulate corrupted JSON content
+
+    with patch("builtins.open", mock_open(read_data=invalid_json)), \
+            patch("controller.log_error_to_file") as mock_log_error, \
+            patch("sys.exit") as mock_exit:
+        controller.get_findings_from_output_file(corrupted_file_path)
+        mock_log_error.assert_called_once_with(
+            exit_code=3,
+            error_message="JSON decoding error: Expecting value: line 1 column 1 (char 0)"
+        )
+
+        mock_exit.assert_called_once_with(3)

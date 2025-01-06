@@ -6,6 +6,8 @@ from unittest.mock import patch, mock_open, MagicMock
 import sys
 import os
 
+from pydantic import ValidationError
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import bonus
@@ -92,3 +94,43 @@ def test_log_error_to_file_with_mocking():
             "exit_code": exit_code,
             "error_message": error_message
         })
+
+
+def test_log_error_to_file_permission_denied():
+    """ handling of permission errors in log_error_to_file """
+    error_file = "error.json"
+    exit_code = 2
+    error_message = "Test error"
+
+    with patch("builtins.open", side_effect=PermissionError), \
+            patch("builtins.print") as mock_print:
+        controller.log_error_to_file(exit_code, error_message, error_file)
+
+        mock_print.assert_any_call(f"Failed to write to {error_file}. Permission denied.")
+        mock_print.assert_any_call(f"Error details: ")
+
+
+def test_pydantic_model_invalid_data():
+    invalid_data = {"filename": None, "line_range": "invalid", "description": 123}
+    with pytest.raises(ValidationError):
+        controller.LeakReport(**invalid_data)
+
+
+def test_leak_report_valid():
+    """Test that valid data works as expected."""
+    report = bonus.LeakReport(filename="test.py", line_range="1-10", description="Sensitive data found")
+    assert report.filename == "test.py"
+    assert report.line_range == "1-10"
+    assert report.description == "Sensitive data found"
+
+
+def test_leak_report_missing_required_field():
+    """Test that missing required fields raise an error."""
+    with pytest.raises(ValidationError):
+        bonus.LeakReport(line_range="1-10", description="Sensitive data found")
+
+
+def test_leak_report_invalid_line_range():
+    """Test that invalid line_range raises an error."""
+    with pytest.raises(ValidationError):
+        bonus.LeakReport(filename="test.py", line_range="invalid")

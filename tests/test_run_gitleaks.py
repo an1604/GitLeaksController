@@ -19,6 +19,24 @@ def test_run_gitleaks_directory_not_found():
     assert excinfo.value.code == 2
 
 
+def test_run_gitleaks_invalid_paths():
+    """Test handling of invalid paths in `run_gitleaks`."""
+    directory_to_scan = "/non/existent/path"
+    output_file = "output_test.json"
+
+    with patch("os.path.exists", return_value=False), \
+            patch("controller.log_error_to_file") as mock_log_error, \
+            patch("sys.exit") as mock_exit:
+        controller.run_gitleaks(directory_to_scan, output_file)
+
+        mock_exit.assert_any_call(2)
+
+        mock_log_error.assert_any_call(
+            exit_code=2,
+            error_message=f"The directory {directory_to_scan} does not exist."
+        )
+
+
 def test_run_gitleaks_no_leaks():
     directory_to_scan = "/test/path"
     output_file = "output_test.json"
