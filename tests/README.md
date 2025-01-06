@@ -16,13 +16,13 @@ This directory houses the test suite for the GitLeaksController project, designe
 Each file in this directory focuses on specific aspects of the project:
 
 - **`test_bonus.py`**: 
-  - Tests the behavior of the bonus section.
+  - Test the behavior of the bonus section.
   - Focuses on features like `pydantic` and `log_error`.
 
 - **`test_docker.py`**: 
   - Validates Docker setup and integration.
   - Includes edge cases such as:
-    - Docker not installed on the system.
+    - Docker is not installed on the system.
     - Failed Docker image builds.
 
 - **`test_run_gitleaks.py`**: 
@@ -39,3 +39,7 @@ Each file in this directory focuses on specific aspects of the project:
     - `clean_outputfile`
     - `get_findings_from_output_file`
     - `parse_json_output`
+
+
+
+![img.png](img.png)
