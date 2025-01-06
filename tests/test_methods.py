@@ -1,8 +1,9 @@
 import json
+import pdb
 import subprocess
 
 import pytest
-from unittest.mock import patch, mock_open
+from unittest.mock import patch, mock_open, MagicMock
 
 import sys
 import os
@@ -32,6 +33,18 @@ def test_execute_command_failure():
         assert excinfo.value.code == 1
 
 
+def test_run_gitleaks_directory_not_found():
+    with pytest.raises(SystemExit) as excinfo:
+        controller.run_gitleaks("non_existent_directory", "output_test.json")
+    assert excinfo.value.code == 2
+
+
+def test_parse_json_output_missing_file():
+    with pytest.raises(SystemExit) as excinfo:
+        controller.parse_json_output("non_existent_directory", "non_existent_file.json")
+    assert excinfo.value.code == 2
+
+
 def test_manipulated_output():
     """ tests the manipulated output using the method parse_json_output"""
     real_output_filename = "output_test.json"
@@ -57,6 +70,23 @@ def test_manipulated_output():
     with open(manipulated_output_filepath, 'r') as manipulated_output_file:
         expected_manipulated_output = json.load(manipulated_output_file)
     assert manipulated_output == expected_manipulated_output, "Mismatch between manipulated output and expected manipulated output."
+
+
+def test_get_findings_from_output_file_json_decode_error():
+    """Test the case where the JSON file has invalid content."""
+    invalid_json_content = "{ invalid json }"  # Simulating a broken JSON file
+    mock_filepath = "/fake/path/output.json"
+
+    with patch("builtins.open", mock_open(read_data=invalid_json_content)), \
+            patch("controller.log_error_to_file") as mock_log_error, \
+            patch("sys.exit") as mock_exit:
+        controller.get_findings_from_output_file(mock_filepath)
+
+        mock_log_error.assert_called_once()
+        args, kwargs = mock_log_error.call_args
+        assert kwargs['exit_code'] == 3
+        assert "JSON decoding error" in kwargs['error_message']
+        mock_exit.assert_called_once_with(3)
 
 
 def test_get_parser_defaults():
@@ -86,8 +116,9 @@ def test_get_parser_custom_args():
 
 def test_get_parser_invalid_args():
     parser = controller.get_parser()
-    with pytest.raises(SystemExit):
-        parser.parse_args(['--invalid_flag'])
+    with pytest.raises(SystemExit) as excinfo:
+        parser.parse_args(["--invalid-arg"])
+    assert excinfo.value.code == 2
 
 
 def test_show_results_with_bonus():
@@ -165,3 +196,37 @@ def test_log_error_to_file_with_mocking():
             "exit_code": exit_code,
             "error_message": error_message
         })
+
+
+def test_main_success():
+    mock_args = MagicMock()
+    mock_args.dirname = "/fake/dir"
+    mock_args.output_filename = "output.json"
+    mock_args.show_result = True
+    mock_args.bonus = True
+
+    with patch("controller.run_gitleaks") as mock_run_gitleaks, \
+            patch("controller.parse_json_output") as mock_parse_json_output, \
+            patch("controller.show_results") as mock_show_results:
+        mock_run_gitleaks.return_value = MagicMock(returncode=0)
+        mock_parse_json_output.return_value = {"findings": []}
+
+        controller.main(mock_args)
+
+        mock_run_gitleaks.assert_called_once_with("/fake/dir", "output.json")
+        mock_parse_json_output.assert_called_once_with("/fake/dir", "output.json")
+        mock_show_results.assert_called_once_with({"findings": []}, bonus=True)
+
+
+def test_main_clean_outputfile_exception():
+    mock_args = MagicMock()
+    mock_args.dirname = "/fake/dir"
+    mock_args.output_filename = "output.json"
+
+    with patch("controller.clean_outputfile", side_effect=Exception("Clean error")), \
+            patch("controller.log_error_to_file") as mock_log_error, \
+            patch("sys.exit") as mock_exit:
+        controller.main(mock_args)
+
+        mock_log_error.assert_called_once_with(exit_code=2, error_message="Clean error")
+        mock_exit.assert_called_once_with(2)
