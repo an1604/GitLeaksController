@@ -1,5 +1,4 @@
 import json
-import pdb
 import subprocess
 
 import pytest
@@ -31,6 +30,26 @@ def test_execute_command_failure():
         with pytest.raises(SystemExit) as excinfo:
             controller.execute_command(command)
         assert excinfo.value.code == 1
+
+
+def test_gitleaks_on_system():
+    """test the case that gitleaks isn't installed on the system."""
+    command = "gitleaks detect"
+    file_not_found_error = FileNotFoundError("No such file or directory: 'gitleaks'")
+
+    with patch("subprocess.run", side_effect=file_not_found_error), \
+            patch("controller.log_error_to_file") as mock_log_error, \
+            patch("sys.exit") as mock_exit:
+        controller.execute_command(command)
+
+        mock_log_error.assert_called_once_with(
+            exit_code=2,
+            error_message=(
+                f"Executable not found or failed executing the command: {command}. "
+                f"Error: {file_not_found_error}"
+            )
+        )
+        mock_exit.assert_called_once_with(2)
 
 
 def test_run_gitleaks_directory_not_found():

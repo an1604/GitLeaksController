@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import pdb
 import shlex
 import stat
 import subprocess
@@ -44,6 +45,11 @@ def execute_command(command, **kwargs):
     except subprocess.CalledProcessError as e:
         log_error_to_file(exit_code=e.returncode, error_message=str(e))
         sys.exit(e.returncode)
+    except FileNotFoundError as e:
+        log_error_to_file(exit_code=2,
+                          error_message=f"Executable not found or failed executing the command: {command}. Error: {str(e)}"
+                          )
+        sys.exit(2)
 
 
 def run_gitleaks(directory_to_scan, output_file):
@@ -54,18 +60,24 @@ def run_gitleaks(directory_to_scan, output_file):
 
     report_path = os.path.join(directory_to_scan, output_file)
     command = f"gitleaks detect --no-git --report-path {directory_to_scan}/output_test.json --source {directory_to_scan}"
-
-    process = execute_command(command)
-    if process.returncode == 0:
-        logger.info(f"Gitleaks scan completed successfully. No leaks found. Report saved at {report_path}")
-    elif process.returncode == 1:
-        logger.warning(f"Gitleaks scan completed. Leaks detected. Report saved at {report_path}")
-    else:
-        logger.error(f"Error occurred during Gitleaks scan. Return code: {process.returncode}")
-        if process.stderr:
-            logger.error(f"Error: {process.stderr}")
-            log_error_to_file(exit_code=process.returncode, error_message=process.stderr)
-    return process
+    try:
+        process = execute_command(command)
+        if process.returncode == 0:
+            logger.info(f"Gitleaks scan completed successfully. No leaks found. Report saved at {report_path}")
+        elif process.returncode == 1:
+            logger.warning(f"Gitleaks scan completed. Leaks detected. Report saved at {report_path}")
+        else:
+            logger.error(f"Error occurred during Gitleaks scan. Return code: {process.returncode}")
+            if process.stderr:
+                logger.error(f"Error: {process.stderr}")
+                log_error_to_file(exit_code=process.returncode, error_message=process.stderr)
+        return process
+    except FileNotFoundError as e:
+        log_error_to_file(
+            exit_code=2,
+            error_message=f"Failed to execute Gitleaks. Command: {command}. Error: {str(e)}"
+        )
+        sys.exit(2)
 
 
 def get_findings_from_output_file(output_filepath):

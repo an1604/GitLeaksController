@@ -1,12 +1,42 @@
+import pdb
 import shutil
 import subprocess
+import sys
 import tempfile
+from unittest.mock import patch
 
 import pytest
 import os
 
 from git import Repo
 import utils_tests as tests_utils
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import controller
+
+
+def test_run_gitleaks_no_docker_installed():
+    """Test the case where Docker is not installed on the user's system."""
+    directory_to_scan = "/fake/path"
+    output_file = "output_test.json"
+    expected_command = f"gitleaks detect --no-git --report-path {directory_to_scan}/output_test.json --source {directory_to_scan}"
+
+    with patch("controller.execute_command") as mock_execute_command, \
+            patch("controller.log_error_to_file") as mock_log_error, \
+            patch("sys.exit") as mock_exit, \
+            patch("os.path.exists", return_value=True):
+        mock_execute_command.side_effect = FileNotFoundError("No such file or directory: 'docker'")
+        controller.run_gitleaks(directory_to_scan=directory_to_scan, output_file=output_file)
+
+        mock_log_error.assert_called_once_with(
+            exit_code=2,
+            error_message=(
+                f"Failed to execute Gitleaks. Command: {expected_command}. "
+                f"Error: No such file or directory: 'docker'"
+            )
+        )
+        mock_exit.assert_called_once_with(2)
 
 
 def test_docker_image_build():
