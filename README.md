@@ -15,6 +15,16 @@ docker build -t gitleaks-controller:latest .
 docker run --rm -v "<LOCAL_DIRECTORY_TO_SCAN>:/code/<CHOOSE_DIRECTORY_NAME>" gitleaks-controller:latest --dir /code/<CHOOSE_DIRECTORY_NAME> 
 ```
 
+#### To avoid errors, ensure:
+
+1. **Replace `<LOCAL_DIRECTORY_TO_SCAN>`** with the absolute path of the local directory to scan.
+2. **Replace `<CHOOSE_DIRECTORY_NAME>`** with a valid directory name inside the container.
+
+#### Tips:
+
+1. For Windows, ensure paths use `\\` (e.g., `C:\\Users\\YourName\\YourFolder`).
+2. Verify local paths exist and placeholders (`<...>`) are replaced correctly.
+
 ### 2. Optional: Run Using Prebuilt Docker Image from Docker Hub
 
 If you prefer not to build the Docker image locally, you can pull the prebuilt image from Docker Hub:
