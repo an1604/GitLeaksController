@@ -6,12 +6,7 @@ import pytest
 import os
 
 from git import Repo
-import stat
-
-def remove_readonly(func, path, _):
-    """ clear the read-only attribute and retry """
-    os.chmod(path, stat.S_IWRITE)
-    func(path)
+import utils_tests as tests_utils
 
 
 def test_docker_image_build():
@@ -44,7 +39,7 @@ def test_docker_run_gitleaks():
 
         try:
             if os.path.exists(local_directory):
-                shutil.rmtree(local_directory, onerror=remove_readonly)
+                shutil.rmtree(local_directory, onerror=tests_utils.remove_readonly)
             Repo.clone_from(test_repo_url, local_directory)
 
             assert os.path.exists(local_directory), "Failed to clone the test repository."
@@ -66,4 +61,4 @@ def test_docker_run_gitleaks():
             pytest.fail(f"Docker run failed with error:\n{e.stderr}")
         finally:
             if os.path.exists(local_directory):
-                shutil.rmtree(local_directory, onerror=remove_readonly)
+                shutil.rmtree(local_directory, onerror=tests_utils.remove_readonly)
