@@ -43,6 +43,6 @@ override:
             enabled: false
           swift:
             enabled: false
-          software-component-analysis-semgrep-pro:
-            enabled: true
+        software-component-analysis-semgrep-pro:
+          enabled: true
             
