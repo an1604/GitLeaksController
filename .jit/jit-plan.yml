@@ -1,30 +1,26 @@
-author: Jit
-items:
-- name: Scan your code for vulnerabilities (SAST)
-  uses: jitsecurity-controls/jit-plans/items/code/item-code-vulnerability.yml@latest
-level: beginner
 name: My plan
+level: beginner
+author: Jit
+version: 0.1
 owners:
   default: null
 references:
-- https://www.jit.io
+  - https://www.jit.io
 tags: []
-version: 0.1
-
+items:
+  - name: Scan your code for vulnerabilities (SAST)
+    uses: >-
+      jitsecurity-controls/jit-plans/items/code/item-code-vulnerability.yml@latest
+  - name: Scan code for hard-coded secrets
+    uses: jitsecurity-controls/jit-plans/items/code/item-secret-detection.yml@latest
 override:
   workflows:
-    sca:
-      jobs:
-        software-component-analysis:
-          enabled: false
-        software-component-analysis-go:
-          enabled: false
-        software-component-analysis-js:
-          enabled: false
-        software-component-analysis-semgrep-pro:
-          enabled: true
     sast:
       jobs:
+        software-component-analysis-semgrep-pro:
+          enabled: true
+        static-code-analysis-c-cpp:
+          enabled: false
         static-code-analysis-csharp:
           enabled: false
         static-code-analysis-go:
@@ -39,16 +35,21 @@ override:
           enabled: false
         static-code-analysis-python-semgrep:
           enabled: false
+        static-code-analysis-ruby:
+          enabled: false
         static-code-analysis-rust:
           enabled: false
         static-code-analysis-scala:
           enabled: false
         static-code-analysis-swift:
           enabled: false
-        static-code-analysis-ruby:
+    sca:
+      jobs:
+        software-component-analysis:
           enabled: false
-        static-code-analysis-c-cpp:
+        software-component-analysis-go:
           enabled: false
-         static-code-analysis-semgrep-pro:
+        software-component-analysis-js:
+          enabled: false
+        software-component-analysis-semgrep-pro:
           enabled: true
-
