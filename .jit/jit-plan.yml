@@ -49,6 +49,6 @@ override:
           enabled: false
         static-code-analysis-c-cpp:
           enabled: false
-        software-component-analysis-semgrep-pro:
+         static-code-analysis-semgrep-pro:
           enabled: true
 
