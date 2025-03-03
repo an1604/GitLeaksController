@@ -18,8 +18,13 @@ override:
       jobs:
         static-code-analysis-semgrep-pro:
           enabled: true
-          env:
-            SEMGREP_APP_TOKEN: 1d6e4039e2608b22d890fa79d70432e93f7cfce594b23f49f50e66e75035cda1
+          steps:
+            - name: Run Semgrep Code Pro Tier
+              # uses: ${{ context.config.custom_registry || registry.jit.io }}/control-semgrep-pro-alpine:latest
+              with:
+                # args: ci --pro --json --severity ERROR
+                env:
+                  SEMGREP_APP_TOKEN: 1d6e4039e2608b22d890fa79d70432e93f7cfce594b23f49f50e66e75035cda1
         static-code-analysis:
           c-cpp:
             enabled: false
