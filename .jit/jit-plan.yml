@@ -18,6 +18,8 @@ override:
       jobs:
         static-code-analysis-semgrep-pro:
           enabled: true
+          env:
+            SEMGREP_APP_TOKEN: 1d6e4039e2608b22d890fa79d70432e93f7cfce594b23f49f50e66e75035cda1
         static-code-analysis:
           c-cpp:
             enabled: false
