@@ -2,10 +2,6 @@ author: Jit
 items:
 - name: Scan your code for vulnerabilities (SAST)
   uses: jitsecurity-controls/jit-plans/items/code/item-code-vulnerability.yml@latest
-- name: Scan your code dependencies for vulnerabilities (SCA)
-  uses: jitsecurity-controls/jit-plans/items/code/item-dependency-check.yml@latest
-- name: Scan code for hard-coded secrets
-  uses: jitsecurity-controls/jit-plans/items/code/item-secret-detection.yml@latest
 level: beginner
 name: My plan
 owners:
