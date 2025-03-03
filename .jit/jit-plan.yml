@@ -9,8 +9,7 @@ references:
 tags: []
 items:
   - name: Scan your code for vulnerabilities (SAST)
-    uses: >-
-      jitsecurity-controls/jit-plans/items/code/item-code-vulnerability.yml@latest
+    uses: jitsecurity-controls/jit-plans/items/code/item-code-vulnerability.yml@latest
   - name: Scan code for hard-coded secrets
     uses: jitsecurity-controls/jit-plans/items/code/item-secret-detection.yml@latest
 override:
@@ -19,37 +18,31 @@ override:
       jobs:
         software-component-analysis-semgrep-pro:
           enabled: true
-        static-code-analysis-c-cpp:
-          enabled: false
-        static-code-analysis-csharp:
-          enabled: false
-        static-code-analysis-go:
-          enabled: false
-        static-code-analysis-java:
-          enabled: false
-        static-code-analysis-js:
-          enabled: false
-        static-code-analysis-kotlin:
-          enabled: false
-        static-code-analysis-python:
-          enabled: false
-        static-code-analysis-python-semgrep:
-          enabled: false
-        static-code-analysis-ruby:
-          enabled: false
-        static-code-analysis-rust:
-          enabled: false
-        static-code-analysis-scala:
-          enabled: false
-        static-code-analysis-swift:
-          enabled: false
-    sca:
-      jobs:
-        software-component-analysis:
-          enabled: false
-        software-component-analysis-go:
-          enabled: false
-        software-component-analysis-js:
-          enabled: false
-        software-component-analysis-semgrep-pro:
-          enabled: true
+        static-code-analysis:
+          c-cpp:
+            enabled: false
+          csharp:
+            enabled: false
+          go:
+            enabled: false
+          java:
+            enabled: false
+          js:
+            enabled: false
+          kotlin:
+            enabled: false
+          python:
+            enabled: false
+          python-semgrep:
+            enabled: false
+          ruby:
+            enabled: false
+          rust:
+            enabled: false
+          scala:
+            enabled: false
+          swift:
+            enabled: false
+          software-component-analysis-semgrep-pro:
+            enabled: true
+            
