@@ -15,3 +15,44 @@ references:
 tags: []
 version: 0.1
 
+override:
+  workflows:
+    sca:
+      jobs:
+        software-component-analysis:
+          enabled: false
+        software-component-analysis-go:
+          enabled: false
+        software-component-analysis-js:
+          enabled: false
+        software-component-analysis-semgrep-pro:
+          enabled: true
+    sast:
+      jobs:
+        static-code-analysis-csharp:
+          enabled: false
+        static-code-analysis-go:
+          enabled: false
+        static-code-analysis-java:
+          enabled: false
+        static-code-analysis-js:
+          enabled: false
+        static-code-analysis-kotlin:
+          enabled: false
+        static-code-analysis-python:
+          enabled: false
+        static-code-analysis-python-semgrep:
+          enabled: false
+        static-code-analysis-rust:
+          enabled: false
+        static-code-analysis-scala:
+          enabled: false
+        static-code-analysis-swift:
+          enabled: false
+        static-code-analysis-ruby:
+          enabled: false
+        static-code-analysis-c-cpp:
+          enabled: false
+        software-component-analysis-semgrep-pro:
+          enabled: true
+
