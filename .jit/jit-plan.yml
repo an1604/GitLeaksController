@@ -16,7 +16,7 @@ override:
   workflows:
     sast:
       jobs:
-        software-component-analysis-semgrep-pro:
+        static-code-analysis-semgrep-pro:
           enabled: true
         static-code-analysis:
           c-cpp:
@@ -43,6 +43,4 @@ override:
             enabled: false
           swift:
             enabled: false
-        software-component-analysis-semgrep-pro:
-          enabled: true
-            
+
