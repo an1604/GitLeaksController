@@ -35,8 +35,6 @@ override:
             - name: Run Checkov (terraform)
               uses: >-
                 ${{ context.config.custom_registry || registry.jit.io }}/control-checkov-iac-slim:sc-29351-checkov-iac-scan-control-integration-tests
-              env:
-                SECURITY_CONTROL_OUTPUT_FILE: /outputs/formatted_results.json
         checkov-iac-cloudformation:
           enabled: true
           steps:
