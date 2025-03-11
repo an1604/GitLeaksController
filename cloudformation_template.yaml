@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template with security issues for Checkov to detect'
+
+Resources:
+  # Insecure S3 bucket with public access
+  InsecureS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: cf-insecure-bucket
+      AccessControl: PublicReadWrite  # CKV_AWS_57: Ensure ACL does not allow public write permissions
+      # Missing block public access settings - CKV_AWS_355
+      
+  # Insecure security group allowing all traffic
+  InsecureSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Insecure security group allowing unrestricted access'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22  # SSH
+          ToPort: 22
+          CidrIp: 0.0.0.0/0  # Allow SSH from anywhere - insecure
+        - IpProtocol: tcp
+          FromPort: 3389  # RDP
+          ToPort: 3389
+          CidrIp: 0.0.0.0/0  # Allow RDP from anywhere - insecure
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0  # Allow all TCP - insecure
+      
+  # Insecure Lambda function without function-level concurrency limit
+  InsecureLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+            return {
+              statusCode: 200,
+              body: JSON.stringify('Hello from Lambda!'),
+            };
+          };
+      Runtime: nodejs14.x
+      # CKV_AWS_115: Missing function-level concurrent execution limit
+      
+  # IAM role with wildcard permissions - overly permissive
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AdministratorAccess'  # Overly permissive
+      
+  # Network ACL with overly permissive rules
+  InsecureNACL:
+    Type: 'AWS::EC2::NetworkAcl'
+    Properties:
+      VpcId: !Ref InsecureVPC
+
+  # Insecure NACL entry allowing all ports - CKV_AWS_352
+  InsecureNACLEntry:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref InsecureNACL
+      RuleNumber: 100
+      Protocol: -1  # All protocols
+      RuleAction: allow
+      Egress: false
+      CidrBlock: 0.0.0.0/0
+      # All ports by default because no port range is specified
+      
+  # VPC for insecure resources
+  InsecureVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true 
