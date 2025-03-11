@@ -9,44 +9,26 @@ references:
 tags: []
 items:
   - name: Scan your code for vulnerabilities (SAST)
-    uses: jitsecurity-controls/jit-plans/items/code/item-code-vulnerability.yml@latest
+    uses: >-
+      jitsecurity-controls/jit-plans/items/code/item-code-vulnerability.yml@latest
   - name: Scan code for hard-coded secrets
     uses: jitsecurity-controls/jit-plans/items/code/item-secret-detection.yml@latest
+  - name: Scan your infrastructure-as-code (IaC) for misconfigurations
+    uses: >-
+      jitsecurity-controls/jit-plans/items/infrastructure/item-iac-misconfiguration-detection.yml@latest
 override:
   workflows:
     sast:
       jobs:
+        static-code-analysis: {}
         static-code-analysis-semgrep-pro:
           enabled: true
           steps:
             - name: Run Semgrep Code Pro Tier
-              uses: ${{ context.config.custom_registry || registry.jit.io }}/control-semgrep-pro-alpine:latest
+              uses: >-
+                ${{ context.config.custom_registry || registry.jit.io
+                }}/control-semgrep-pro-alpine:latest
               with:
                 env:
-                  SEMGREP_APP_TOKEN: 1d6e4039e2608b22d890fa79d70432e93f7cfce594b23f49f50e66e75035cda1
-        static-code-analysis:
-          c-cpp:
-            enabled: false
-          csharp:
-            enabled: false
-          go:
-            enabled: false
-          java:
-            enabled: false
-          js:
-            enabled: false
-          kotlin:
-            enabled: false
-          python:
-            enabled: false
-          python-semgrep:
-            enabled: false
-          ruby:
-            enabled: false
-          rust:
-            enabled: false
-          scala:
-            enabled: false
-          swift:
-            enabled: false
-
+                  SEMGREP_APP_TOKEN: >-
+                    1d6e4039e2608b22d890fa79d70432e93f7cfce594b23f49f50e66e75035cda1
