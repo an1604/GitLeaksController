@@ -9,16 +9,15 @@ references:
 tags: []
 items:
   - name: Scan your code for vulnerabilities (SAST)
-    uses: >-
-      jitsecurity-controls/jit-plans/items/code/item-code-vulnerability.yml@latest
+    uses: jitsecurity-controls/jit-plans/items/code/item-code-vulnerability.yml@latest
   - name: Scan code for hard-coded secrets
     uses: jitsecurity-controls/jit-plans/items/code/item-secret-detection.yml@latest
   - name: Scan your infrastructure-as-code (IaC) for misconfigurations
-    uses: >-
-      jitsecurity-controls/jit-plans/items/infrastructure/item-iac-misconfiguration-detection.yml@latest
+    uses: jitsecurity-controls/jit-plans/items/infrastructure/item-iac-misconfiguration-detection.yml@latest
+
 override:
   workflows:
-    iac-missconfiguration-detection:
+    iac-misconfiguration-detection:
       jobs:
         iac-misconfig-detection-terraform:
           enabled: false
@@ -34,28 +33,33 @@ override:
           enabled: true
           steps:
             - name: Run Checkov (terraform)
-              uses: ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
+              uses: >-
+                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
         checkov-iac-cloudformation:
           enabled: true
           steps:
             - name: Run Checkov (cloudformation)
-              uses: ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
+              uses: >-
+                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
         checkov-iac-kubernetes:
           enabled: true
           steps:
             - name: Run Checkov (kubernetes)
-              uses: ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
+              uses: >-
+                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
         checkov-iac-docker:
           enabled: true
           steps:
             - name: Run Checkov (docker)
-              uses: ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
+              uses: >-
+                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
         checkov-iac-arm:
           enabled: true
           steps:
             - name: Run Checkov (arm)
-              uses: ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
-        
+              uses: >-
+                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
+
     sast:
       jobs:
         static-code-analysis: {}
@@ -64,8 +68,7 @@ override:
           steps:
             - name: Run Semgrep Code Pro Tier
               uses: >-
-                ${{ context.config.custom_registry || registry.jit.io
-                }}/control-semgrep-pro-alpine:latest
+                ${{ context.config.custom_registry || registry.jit.io }}/control-semgrep-pro-alpine:latest
               with:
                 env:
                   SEMGREP_APP_TOKEN: >-
