@@ -53,13 +53,13 @@ override:
             - name: Run Checkov (docker)
               uses: >-
                 ${{ context.config.custom_registry || registry.jit.io }}/control-checkov-iac-slim:sc-29351-checkov-iac-scan-control-integration-tests
-        checkov-iac-arm:
+        checkov-iac-all:
           enabled: true
           steps:
-            - name: Run Checkov (arm)
+            - name: Run Checkov (all frameworks)
               uses: >-
                 ${{ context.config.custom_registry || registry.jit.io }}/control-checkov-iac-slim:sc-29351-checkov-iac-scan-control-integration-tests
-
+        
     sast:
       jobs:
         static-code-analysis: {}
