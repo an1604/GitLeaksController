@@ -34,31 +34,31 @@ override:
           steps:
             - name: Run Checkov (terraform)
               uses: >-
-                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
+                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:sc-29351-checkov-iac-scan-control-integration-tests
         checkov-iac-cloudformation:
           enabled: true
           steps:
             - name: Run Checkov (cloudformation)
               uses: >-
-                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
+                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:sc-29351-checkov-iac-scan-control-integration-tests
         checkov-iac-kubernetes:
           enabled: true
           steps:
             - name: Run Checkov (kubernetes)
               uses: >-
-                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
+                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:sc-29351-checkov-iac-scan-control-integration-tests
         checkov-iac-docker:
           enabled: true
           steps:
             - name: Run Checkov (docker)
               uses: >-
-                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
+                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:sc-29351-checkov-iac-scan-control-integration-tests
         checkov-iac-arm:
           enabled: true
           steps:
             - name: Run Checkov (arm)
               uses: >-
-                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:iac-misconfig-detection-cloudformation:sc-29351-checkov-iac-scan-control-integration-tests
+                ${{ context.config.custom_registry || registry.jit.io }}/checkov-iac-control:sc-29351-checkov-iac-scan-control-integration-tests
 
     sast:
       jobs:
