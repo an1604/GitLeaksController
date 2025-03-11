@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insecure-nginx
+  namespace: default # CKV_K8S_21: The default namespace should not be used
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      # CKV_K8S_8/9: Missing Liveness and Readiness Probes
+      # CKV_K8S_29: Missing securityContext
+      containers:
+      - name: nginx
+        image: nginx:latest # CKV_K8S_14: Image Tag should be fixed - not latest or blank
+        imagePullPolicy: IfNotPresent # CKV_K8S_15: Image Pull Policy should be Always
+        # CKV_K8S_10/11/12/13: Missing resource limits and requests
+        ports:
+        - containerPort: 80
+          hostPort: 8080 # CKV_K8S_26: Do not specify hostPort unless absolutely necessary
+        securityContext:
+          privileged: true # CKV_K8S_16: Do not admit privileged containers
+          allowPrivilegeEscalation: true # CKV_K8S_5: Containers should not run with allowPrivilegeEscalation
+          readOnlyRootFilesystem: false # CKV_K8S_22: Use read-only filesystem for containers where possible
+          runAsNonRoot: false # CKV_K8S_6: Do not admit root containers
+          capabilities:
+            add: ["NET_RAW", "SYS_ADMIN"] # CKV_K8S_7/39: Do not admit containers with dangerous capabilities
+        volumeMounts:
+        - mountPath: /var/run/docker.sock
+          name: docker-socket # CKV_K8S_27: Do not expose the docker daemon socket to containers
+      volumes:
+      - name: docker-socket
+        hostPath:
+          path: /var/run/docker.sock
+          type: Socket
+      hostNetwork: true # CKV_K8S_4: Do not admit containers wishing to share the host network namespace
+      hostIPC: true # CKV_K8S_3: Do not admit containers wishing to share the host IPC namespace
+      hostPID: true # CKV_K8S_1: Minimize the admission of containers wishing to share the host process ID namespace
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secrets-env
+  namespace: default
+spec:
+  containers:
+  - name: secrets-env-container
+    image: redis:6
+    env:
+    - name: API_KEY # CKV_K8S_35: Prefer using secrets as files over secrets as environment variables
+      value: "secretAPIkey123!"
+    - name: DB_PASSWORD
+      value: "supersecretpassword"
+  serviceAccountName: default # CKV_K8S_41/42: Ensure that default service accounts are not actively used 
