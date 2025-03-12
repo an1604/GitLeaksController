@@ -1,0 +1,364 @@
+{
+  "Tenants": {
+    "Type": "AWS::DynamoDB::Table",
+    "Properties": {
+      "TableName": "Tenants",
+      "BillingMode": "PAY_PER_REQUEST",
+      "PointInTimeRecoverySpecification": {
+        "PointInTimeRecoveryEnabled": true
+      },
+      "AttributeDefinitions": [
+        {
+          "AttributeName": "PK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "SK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI1PK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI2PK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI3PK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI3SK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI4PK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI4SK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI5PK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI5SK",
+          "AttributeType": "S"
+        }
+      ],
+      "KeySchema": [
+        {
+          "AttributeName": "PK",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "SK",
+          "KeyType": "RANGE"
+        }
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "GSI1",
+          "KeySchema": [
+            {
+              "AttributeName": "GSI1PK",
+              "KeyType": "HASH"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          }
+        },
+        {
+          "IndexName": "GSI2",
+          "KeySchema": [
+            {
+              "AttributeName": "GSI2PK",
+              "KeyType": "HASH"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          }
+        },
+        {
+          "IndexName": "GSI3",
+          "KeySchema": [
+            {
+              "AttributeName": "GSI3PK",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "GSI3SK",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          }
+        },
+        {
+          "IndexName": "GSI4",
+          "KeySchema": [
+            {
+              "AttributeName": "GSI4PK",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "GSI4SK",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          }
+        },
+        {
+          "IndexName": "GSI5",
+          "KeySchema": [
+            {
+              "AttributeName": "GSI5PK",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "GSI5SK",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          }
+        }
+      ]
+    }
+  },
+  "Preferences": {
+    "Type": "AWS::DynamoDB::Table",
+    "Properties": {
+      "TableName": "Preferences",
+      "BillingMode": "PAY_PER_REQUEST",
+      "PointInTimeRecoverySpecification": {
+        "PointInTimeRecoveryEnabled": true
+      },
+      "AttributeDefinitions": [
+        {
+          "AttributeName": "PK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "SK",
+          "AttributeType": "S"
+        }
+      ],
+      "KeySchema": [
+        {
+          "AttributeName": "PK",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "SK",
+          "KeyType": "RANGE"
+        }
+      ]
+    }
+  },
+  "DynamoTenantsAlarmConsumedWriteCapacityUnits": {
+    "Type": "AWS::CloudWatch::Alarm",
+    "Properties": {
+      "AlarmDescription": "High ConsumedWriteCapacityUnits in DynamoDB Tenants table",
+      "Namespace": "AWS/DynamoDB",
+      "MetricName": "ConsumedWriteCapacityUnits",
+      "Statistic": "Sum",
+      "Threshold": 1,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "EvaluationPeriods": 1,
+      "Period": 60,
+      "Dimensions": [
+        {
+          "Name": "TableName",
+          "Value": {
+            "Fn::GetAtt": [
+              "Tenants",
+              "Arn"
+            ]
+          }
+        }
+      ],
+      "AlarmActions": [
+        {
+          "Ref": "TopicCloudwatchTenantsAlarm"
+        }
+      ]
+    }
+  },
+  "TopicCloudwatchTenantsAlarm": {
+    "Type": "AWS::SNS::Topic",
+    "Properties": {
+      "TopicName": "${self:service}-${self:provider.stage}-tenants-topic-cloudwatch-alarm"
+    }
+  },
+  "TopicCloudwatchTenantsAlarmSubscription": {
+    "Type": "AWS::SNS::Subscription",
+    "Properties": {
+      "Endpoint": "aws-alerts@jit.io",
+      "Protocol": "email",
+      "TopicArn": {
+        "Ref": "TopicCloudwatchTenantsAlarm"
+      }
+    }
+  },
+  "Users": {
+    "Type": "AWS::DynamoDB::Table",
+    "Properties": {
+      "TableName": "Users",
+      "BillingMode": "PAY_PER_REQUEST",
+      "PointInTimeRecoverySpecification": {
+        "PointInTimeRecoveryEnabled": true
+      },
+      "AttributeDefinitions": [
+        {
+          "AttributeName": "PK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "SK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI1PK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI1SK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI2PK",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "GSI2SK",
+          "AttributeType": "S"
+        }
+      ],
+      "KeySchema": [
+        {
+          "AttributeName": "PK",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "SK",
+          "KeyType": "RANGE"
+        }
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "GSI1",
+          "KeySchema": [
+            {
+              "AttributeName": "GSI1PK",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "GSI1SK",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          }
+        },
+        {
+          "IndexName": "GSI2",
+          "KeySchema": [
+            {
+              "AttributeName": "GSI2PK",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "GSI2SK",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          }
+        }
+      ]
+    }
+  },
+  "DynamoUsersAlarmConsumedWriteCapacityUnits": {
+    "Type": "AWS::CloudWatch::Alarm",
+    "Properties": {
+      "AlarmDescription": "High ConsumedWriteCapacityUnits in DynamoDB Users table",
+      "Namespace": "AWS/DynamoDB",
+      "MetricName": "ConsumedWriteCapacityUnits",
+      "Statistic": "Sum",
+      "Threshold": 1,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "EvaluationPeriods": 1,
+      "Period": 60,
+      "Dimensions": [
+        {
+          "Name": "TableName",
+          "Value": {
+            "Fn::GetAtt": [
+              "Users",
+              "Arn"
+            ]
+          }
+        }
+      ],
+      "AlarmActions": [
+        {
+          "Ref": "TopicCloudwatchUsersAlarm"
+        }
+      ]
+    }
+  },
+  "TopicCloudwatchUsersAlarm": {
+    "Type": "AWS::SNS::Topic",
+    "Properties": {
+      "TopicName": "${self:service}-${self:provider.stage}-users-topic-cloudwatch-alarm"
+    }
+  },
+  "TopicCloudwatchUsersAlarmSubscription": {
+    "Type": "AWS::SNS::Subscription",
+    "Properties": {
+      "Endpoint": "aws-alerts@jit.io",
+      "Protocol": "email",
+      "TopicArn": {
+        "Ref": "TopicCloudwatchUsersAlarm"
+      }
+    }
+  },
+  "GatewayResponseDefault4XX": {
+    "Type": "AWS::ApiGateway::GatewayResponse",
+    "Properties": {
+      "ResponseParameters": {
+        "gatewayresponse.header.Access-Control-Allow-Origin": "'*'",
+        "gatewayresponse.header.Access-Control-Allow-Headers": "'*'"
+      },
+      "ResponseType": "DEFAULT_4XX",
+      "RestApiId": {
+        "Ref": "ApiGatewayRestApi"
+      }
+    }
+  },
+  "GatewayResponseDefault5XX": {
+    "Type": "AWS::ApiGateway::GatewayResponse",
+    "Properties": {
+      "ResponseParameters": {
+        "gatewayresponse.header.Access-Control-Allow-Origin": "'*'",
+        "gatewayresponse.header.Access-Control-Allow-Headers": "'*'"
+      },
+      "ResponseType": "DEFAULT_5XX",
+      "RestApiId": {
+        "Ref": "ApiGatewayRestApi"
+      }
+    }
+  }
+}
