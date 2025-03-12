@@ -29,30 +29,6 @@ override:
           enabled: false
         iac-misconfig-detection-pulumi:
           enabled: false
-        checkov-iac-terraform:
-          enabled: true
-          steps:
-            - name: Run Checkov (terraform)
-              uses: >-
-                ${{ context.config.custom_registry || registry.jit.io }}/control-checkov-iac-slim:sc-29351-checkov-iac-scan-control-integration-tests
-        checkov-iac-cloudformation:
-          enabled: true
-          steps:
-            - name: Run Checkov (cloudformation)
-              uses: >-
-                ${{ context.config.custom_registry || registry.jit.io }}/control-checkov-iac-slim:sc-29351-checkov-iac-scan-control-integration-tests
-        checkov-iac-kubernetes:
-          enabled: true
-          steps:
-            - name: Run Checkov (kubernetes)
-              uses: >-
-                ${{ context.config.custom_registry || registry.jit.io }}/control-checkov-iac-slim:sc-29351-checkov-iac-scan-control-integration-tests
-        checkov-iac-docker:
-          enabled: true
-          steps:
-            - name: Run Checkov (docker)
-              uses: >-
-                ${{ context.config.custom_registry || registry.jit.io }}/control-checkov-iac-slim:sc-29351-checkov-iac-scan-control-integration-tests
         checkov-iac-all:
           enabled: true
           steps:
