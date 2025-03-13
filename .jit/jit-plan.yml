@@ -1,48 +1,43 @@
-name: My plan
-level: beginner
 author: Jit
-version: 0.1
-owners:
-  default: null
-references:
-  - https://www.jit.io
-tags: []
 items:
-  - name: Scan your code for vulnerabilities (SAST)
-    uses: jitsecurity-controls/jit-plans/items/code/item-code-vulnerability.yml@latest
-  - name: Scan code for hard-coded secrets
-    uses: jitsecurity-controls/jit-plans/items/code/item-secret-detection.yml@latest
-  - name: Scan your infrastructure-as-code (IaC) for misconfigurations
-    uses: jitsecurity-controls/jit-plans/items/infrastructure/item-iac-misconfiguration-detection.yml@latest
-
+- name: Scan your code for vulnerabilities (SAST)
+  uses: jitsecurity-controls/jit-plans/items/code/item-code-vulnerability.yml@latest
+- name: Scan your infrastructure-as-code (IaC) for misconfigurations
+  uses: jitsecurity-controls/jit-plans/items/infrastructure/item-iac-misconfiguration-detection.yml@latest
+- name: Scan code for hard-coded secrets
+  uses: jitsecurity-controls/jit-plans/items/code/item-secret-detection.yml@latest
+- name: Analyze for Jit Context
+  uses: jitsecurity-controls/jit-plans/items/jit-context/item-jit-context-analysis.yml@latest
+level: beginner
+name: My plan
 override:
   workflows:
     iac-misconfiguration-detection:
       jobs:
-        iac-misconfig-detection-terraform:
-          enabled: false
+        checkov-iac-all:
+          enabled: true
+          steps:
+          - name: Run Checkov (all frameworks)
+            uses: ${{ context.config.custom_registry || registry.jit.io }}/control-checkov-iac-slim:sc-29351-checkov-iac-scan-control-integration-tests
         iac-misconfig-detection-cloudformation:
           enabled: false
         iac-misconfig-detection-kubernetes:
           enabled: false
-        iac-misconfig-detection-serverless:
-          enabled: false
         iac-misconfig-detection-pulumi:
           enabled: false
-        checkov-iac-all:
-          enabled: true
-          steps:
-            - name: Run Checkov (all frameworks)
-              uses: >-
-                ${{ context.config.custom_registry || registry.jit.io }}/control-checkov-iac-slim:sc-29351-checkov-iac-scan-control-integration-tests
-    
+        iac-misconfig-detection-serverless:
+          enabled: false
+        iac-misconfig-detection-terraform:
+          enabled: false
     sast:
       jobs:
+        static-code-analysis-c-cpp:
+          enabled: false
         static-code-analysis-checkmarx:
           enabled: true
           steps:
-            - name: Run Checkmarx SAST
-              uses: ${{ context.config.custom_registry || registry.jit.io }}/control-checkmarx-alpine:sc-29486-jit-controls-new-checkmarx-control
+          - name: Run Checkmarx SAST
+            uses: ${{ context.config.custom_registry || registry.jit.io }}/control-checkmarx-alpine:sc-29486-jit-controls-new-checkmarx-control
         static-code-analysis-csharp:
           enabled: false
         static-code-analysis-go:
@@ -57,24 +52,19 @@ override:
           enabled: false
         static-code-analysis-python-semgrep:
           enabled: false
+        static-code-analysis-ruby:
+          enabled: false
         static-code-analysis-rust:
           enabled: false
         static-code-analysis-scala:
           enabled: false
-        static-code-analysis-swift:
-          enabled: false
-        static-code-analysis-ruby:
-          enabled: false
-        static-code-analysis-c-cpp:
-          enabled: false
-
         static-code-analysis-semgrep-pro:
           enabled: false
-        #   steps:
-        #     - name: Run Semgrep Code Pro Tier
-        #       uses: >-
-        #         ${{ context.config.custom_registry || registry.jit.io }}/control-semgrep-pro-alpine:latest
-        #       with:
-        #         env:
-        #           SEMGREP_APP_TOKEN: >-
-        #             1d6e4039e2608b22d890fa79d70432e93f7cfce594b23f49f50e66e75035cda1
+        static-code-analysis-swift:
+          enabled: false
+owners:
+  default: null
+references:
+- https://www.jit.io
+tags: []
+version: 0.1
