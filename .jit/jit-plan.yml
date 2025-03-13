@@ -37,8 +37,8 @@ override:
           enabled: true
           steps:
           - name: Run Checkmarx SAST
-            # uses: ${{ context.config.custom_registry || registry.jit.io }}/control-checkmarx-alpine:sc-29486-jit-controls-new-checkmarx-control
-            uses: ${{ context.config.custom_registry || registry.jit.io }}/control-checkmarx-alpine:restore-branch
+            uses: ${{ context.config.custom_registry || registry.jit.io }}/control-checkmarx-alpine:sc-29486-jit-controls-new-checkmarx-control
+            # uses: ${{ context.config.custom_registry || registry.jit.io }}/control-checkmarx-alpine:restore-branch
         static-code-analysis-csharp:
           enabled: false
         static-code-analysis-go:
