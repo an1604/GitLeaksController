@@ -37,7 +37,7 @@ override:
           enabled: true
           steps:
           - name: Run Checkmarx SAST
-            uses: ${{ context.config.custom_registry || registry.jit.io }}/control-checkmarx-alpine:sc-29485-jit-plans-create-a-new-checkmarks-sast-job
+            uses: ${{ context.config.custom_registry || registry.jit.io }}/control-checkmarx-alpine:sc-29496-jit-checkmarx-control-apply-change-from-thursday
             # uses: ${{ context.config.custom_registry || registry.jit.io }}/control-checkmarx-alpine:fix-of-filename
         static-code-analysis-csharp:
           enabled: false
