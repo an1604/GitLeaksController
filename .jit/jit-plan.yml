@@ -24,7 +24,6 @@ override:
             - name: Run Checkov
               uses: >-
                 ${{ context.config.custom_registry || registry.jit.io }}/control-checkov-iac-slim:main
-                # }/control-checkov-iac-slim:latest
         iac-misconfig-detection-cloudformation:
           enabled: false
         iac-misconfig-detection-kubernetes:
