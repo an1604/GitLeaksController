@@ -23,8 +23,7 @@ override:
           steps:
             - name: Run Checkov
               uses: >-
-                ${{ context.config.custom_registry || registry.jit.io
-                }}/control-checkov-iac-slim:latest
+                ${{ context.config.custom_registry || registry.jit.io }}/control-checkov-iac-slim:latest
                 # }}/control-checkov-iac-slim:latest
         iac-misconfig-detection-cloudformation:
           enabled: false
