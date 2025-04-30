@@ -1,0 +1,1555 @@
+service: tenant-service
+
+frameworkVersion: "3"
+
+package:
+  exclude:
+    - "./**"
+  include:
+    - "src/**"
+
+provider:
+  tags:
+    lumigo:auto-trace: true
+    environment: ${env:ENV_NAME, self:provider.stage}
+    LUMIGO_TAG: ${self:service}
+  name: aws
+  deploymentBucket:
+    blockPublicAccess: true
+    serverSideEncryption: AES256
+  stage: ${opt:stage, 'local'}
+  runtime: python3.8
+  timeout: 30
+  region: us-east-1
+  apiGateway:
+    shouldStartNameWithService: true
+  eventBridge:
+    useCloudFormation: true
+  lambdaHashingVersion: 20201221
+  environment:
+    API_HOST: ${self:custom.api_host}
+    FRONTEGG_HOST: "api.frontegg.com"
+    ENV_NAME: ${env:ENV_NAME, self:provider.stage}
+    DEPLOYMENT_STAGE: ${self:provider.stage}
+    SERVICE_NAME: ${self:service}
+    AWS_REGION_NAME: us-east-1
+    DYNAMODB_ISOLATION_ROLE: ${ssm:/${self:custom.env_name}/infra/iam-role/dynamodb-assumed-iam-role}
+    TENANTS_TABLE_NAME: "Tenants"
+    PREFERENCES_TABLE_NAME: "Preferences"
+    LAUNCH_DARKLY_SDK_KEY: ${ssm:/${self:custom.env_name}/infra/launch-darkly/sdk-key, true}
+    GENERAL_ROLE_TO_ASSUME_ARN: ${ssm:/${self:custom.env_name}/infra/iam-role/general-tenant-isolation-iam-role}
+    AWS_ACCOUNT_ID: "${aws:accountId}"
+  iamRoleStatements:
+    # This IAM-role (used by the warmup lambda) must be a global role, because the warmup lambda is being created automatically
+    - Effect: Allow
+      Action:
+        - lambda:InvokeFunction
+      Resource: ${file(iamRoleResource.yml)}
+
+plugins: ${self:custom.plugins.${self:provider.stage}, self:custom.plugins.default}
+
+custom:
+  env_name: ${env:ENV_NAME, self:provider.stage}
+  api_host: ${ssm:/${self:custom.env_name}/infra/api/host, 'api.local.jitdev.io'}
+  app_name:
+    prod: app-${self:provider.stage}
+    staging: app-${self:provider.stage}
+    dev: app-${self:provider.stage}
+    custom_env: app-${self:custom.env_name}-${self:provider.stage}
+  basePath: tenant
+  plugins:
+    local:
+      - serverless-openapi-documenter
+      - serverless-localstack
+      - serverless-functions-base-path
+      - serverless-python-requirements
+      - serverless-manifest-plugin
+      - serverless-dotenv-plugin
+      - serverless-plugin-ifelse
+      - serverless-iam-roles-per-function
+      - serverless-prune-plugin
+      - dynamo-data-transform
+    default:
+      - serverless-openapi-documenter
+      - serverless-prune-plugin
+      - serverless-functions-base-path
+      - serverless-python-requirements
+      - serverless-manifest-plugin
+      - serverless-dotenv-plugin
+      - serverless-plugin-ifelse
+      - serverless-domain-manager
+      - serverless-iam-roles-per-function
+      - serverless-ssm-publish
+      - dynamo-data-transform
+      - serverless-plugin-warmup
+  # Temporary exclude custom authorizer in localstack -> https://github.com/localstack/localstack/issues/4159
+  serverlessIfElse:
+    - If: '"${self:provider.stage}" == "local" || "${self:provider.stage}" == "test"'
+      Exclude:
+        - functions.auth-jwt
+        - functions.create-user-vendor.events.1.eventBridge
+        - functions.cloud-formation-stack-listener.events.0.sns
+        - functions.cloud-formation-stack-listener.events.1.sns
+        - functions.cloud-formation-stack-listener.events.2.sns
+        - functions.cloud-formation-stack-listener.events.3.sns
+        - functions.cloud-formation-stack-listener.events.4.sns
+        - functions.cloud-formation-stack-listener.events.5.sns
+        - functions.cloud-formation-stack-listener.events.6.sns
+        - functions.cloud-formation-stack-listener.events.7.sns
+        - functions.cloud-formation-stack-listener.events.8.sns
+        - functions.cloud-formation-stack-listener.events.9.sns
+        - functions.cloud-formation-stack-listener.events.10.sns
+        - functions.cloud-formation-stack-listener.events.11.sns
+        - functions.cloud-formation-stack-listener.events.12.sns
+        - functions.cloud-formation-stack-listener.events.13.sns
+        - functions.cloud-formation-stack-listener.events.14.sns
+        - functions.cloud-formation-stack-listener.events.15.sns
+        - functions.cloud-formation-stack-listener.events.16.sns
+  localstack:
+    hostname:
+      local: http://localhost
+      test: http://localhost
+    debug: true
+    stages:
+      - local
+      - test
+    host: ${self:custom.localstack.hostname.${self:provider.stage}, ''}
+    endpoints:
+      APIGateway: ${self:custom.localstack.host}:4566
+      DynamoDB: ${self:custom.localstack.host}:4566
+      Lambda: ${self:custom.localstack.host}:4566
+      SSM: ${self:custom.localstack.host}:4566
+  prune:
+    automatic: true
+    includeLayers: true
+    number: 3
+  dotenv:
+    path: .env/.${self:provider.stage}
+  pythonRequirements:
+    dockerizePip: non-linux
+    dockerSsh: true
+    fileName: requirements.txt
+    slim: true
+    useDownloadCache: false
+    useStaticCache: false
+  functionsBasePath: src/handlers
+  customDomain:
+    type: rest
+    domainName: ${ssm:/${self:custom.env_name}/infra/api/host, 'api.local.jitdev.io'}
+    basePath: ${self:custom.basePath}
+    certificateName: ${ssm:/${self:custom.env_name}/infra/api/host, 'api.local.jitdev.io'}
+    stage: ${self:provider.stage}
+    endpointType: "edge"
+    securityPolicy: tls_1_2
+    createRoute53Record: true
+  ssmPublish:
+    enabled: true
+    params:
+      - path: /${self:custom.env_name}/service-discovery/${self:service}
+        value: "https://${ssm:/${self:custom.env_name}/infra/api/host, 'api.local.jitdev.io'}/${self:custom.basePath}"
+        secure: false
+  warmup:
+    workWeek:
+      enabled: false
+      events:
+        - schedule: cron(*/10 5-19 ? * SUN-FRI *)
+      concurrency: 3
+      prewarm: false
+      cleanFolder: false
+      role: IamRoleLambdaExecution
+      timeout: 20
+    weekEnd:
+      enabled: false
+      events:
+        - schedule: cron(*/30 5-13 ? * SAT *)
+      concurrency: 1
+      prewarm: false
+      cleanFolder: false
+      role: IamRoleLambdaExecution
+      timeout: 20
+  documentation:
+    version: "1"
+    title: "Tenant service"
+    description: "API for tenant service"
+    termsOfService: https://jit.io
+    x-base-path: ${self:custom.basePath}
+    tags: # This section is not shown under readme.io, but does in other type of documentation readers - so it's important to fill it
+      - name: Tenant # This will be the section name in the documentation (left navbar)
+        description: Returns, adds, edits, or remove tenant and preferences data.
+        externalDocumentation: # Learn more section so users can learn more in JIT documentation
+          url: https://docs.jit.io/docs
+          description: Learn about managing your tenant in JIT
+    servers:
+      url: https://${ssm:/${self:custom.env_name}/infra/api/host, 'api.local.jitdev.io'}/{basePath}
+      description: "The service API server"
+      variables:
+        basePath:
+          default: tenant
+    securitySchemes:
+      bearerAuth:
+        type: http
+        scheme: bearer
+        bearerFormat: JWT
+    security:
+      - bearerAuth: []
+
+anchors:
+  warmup: &warmup
+    workWeek:
+      enabled:
+        - staging
+        - prod
+    weekEnd:
+      enabled:
+        - staging
+        - prod
+
+  jwtAuthorizer: &jwtAuthorizer
+    arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer, 'default'}
+    type: request
+    resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+
+  iamRoles:
+    generalTenantIsolationRole: &generalTenantIsolationRole
+      Effect: Allow
+      Action: sts:AssumeRole
+      Resource: ${ssm:/${self:custom.env_name}/infra/iam-role/general-tenant-isolation-iam-role, 'default'}
+
+functions:
+  create-installation:
+    handler: create_installation.handler
+    memorySize: 256
+    description: create an installation object
+    events:
+      - http:
+          authorizer: aws_iam
+          method: post
+          path: /installation
+    warmup: *warmup
+    iamRoleStatementsName: create-installation-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action: events:PutEvents
+        Resource:
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/websocket-push
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/installations
+          - ${ssm:/${self:custom.env_name}/infra/event-bus/analytics, "arn:aws:events:us-east-1:000000000000:event-bus/analytics"}
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+      - Effect: Allow
+        Action: execute-api:Invoke
+        Resource:
+          # authentication-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${opt:stage}/POST/token/internal
+
+  partial-update-installation:
+    handler: partial_update_installation.handler
+    memorySize: 256
+    description: partial update an installation object
+    events:
+      - eventBridge:
+          eventBus: ${ssm:/${self:custom.env_name}/infra/event-bus/installations, 'default'}
+          pattern:
+            source:
+              - "execution-service"
+              - "plan-service"
+              - "asset-service"
+              - "applifecycle-service"
+            detail-type:
+              - "partial-update-installation"
+      - http:
+          method: patch
+          path: /installation
+          authorizer: aws_iam
+    warmup: *warmup
+    iamRoleStatementsName: partial-update-installation-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action: events:PutEvents
+        Resource:
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/websocket-push
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/installations
+          - ${ssm:/${self:custom.env_name}/infra/event-bus/analytics, "arn:aws:events:us-east-1:000000000000:event-bus/analytics"}
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+      - Effect: Allow
+        Action: execute-api:Invoke
+        Resource:
+          # authentication-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${opt:stage}/POST/token/internal
+
+  get-preferences:
+    handler: get_preferences.handler
+    memorySize: 256
+    description: get all preferences for a given tenant
+    events:
+      - http:
+          method: get
+          path: /preferences
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer-v2}
+            type: request
+            resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - Tenant
+              - tenant
+            allowCredentials: false
+    warmup: *warmup
+    iamRoleStatementsName: get-preferences-role
+    iamRoleStatements:
+      - <<: *generalTenantIsolationRole
+
+  get-preference:
+    handler: get_preferences.get_preference_by_type
+    memorySize: 256
+    description: Get preference for a given type
+    events:
+      - http:
+          method: get
+          path: /preferences/{preference_type}
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer-v2}
+            type: request
+            resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - Tenant
+              - tenant
+            allowCredentials: false
+    warmup: *warmup
+    iamRoleStatementsName: get-single-preference-role
+    iamRoleStatements:
+      - <<: *generalTenantIsolationRole
+
+  partial-update-preference:
+    handler: partial_update_preferences.handler
+    memorySize: 256
+    description: update preference for a given tenant
+    events:
+      - http:
+          method: patch
+          path: /preferences/{preference_type}
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer}
+            type: request
+            resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - Tenant
+              - tenant
+            allowCredentials: false
+    warmup: *warmup
+    iamRoleStatementsName: partial-update-preferences-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action: events:PutEvents
+        Resource:
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/websocket-push
+          - ${ssm:/${self:custom.env_name}/infra/event-bus/preferences}
+      - Effect: Allow
+        Action:
+          - sts:AssumeRole
+        Resource:
+          - ${ssm:/${self:custom.env_name}/infra/iam-role/dynamodb-assumed-iam-role}
+
+  create-installation-request:
+    handler: installation_requests.create_installation_request
+    memorySize: 512
+    description: Create installation request
+    events:
+      - eventBridge:
+          eventBus: ${ssm:/${self:custom.env_name}/infra/event-bus/install-application-request}
+          pattern:
+            source:
+              - "applifecycle-service"
+            detail-type:
+              - "create-request"
+    iamRoleStatementsName: create-installation-request-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+
+  update-installation-request:
+    handler: installation_requests.update_installation_request
+    memorySize: 512
+    description: Update installation request
+    events:
+      - eventBridge:
+          eventBus: ${ssm:/${self:custom.env_name}/infra/event-bus/install-application-request}
+          pattern:
+            source:
+              - "applifecycle-service"
+              - "plan-service"
+            detail-type:
+              - "update-request"
+    iamRoleStatementsName: update-installation-request-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+
+  get-installation-requests:
+    handler: installation_requests.get_installation_requests
+    memorySize: 512
+    description: Get installation requests
+    events:
+      - http:
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer}
+            type: request
+            resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+          method: get
+          path: /vendor/{vendor}/installation/requests
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - Tenant
+              - tenant
+            allowCredentials: false
+    warmup: *warmup
+    iamRoleStatementsName: get-installation-requests-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+      - Effect: Allow
+        Action:
+          - sts:AssumeRole
+        Resource:
+          - ${ssm:/${self:custom.env_name}/infra/iam-role/dynamodb-assumed-iam-role}
+
+  get-all-tenants:
+    handler: get_tenant.all_tenants
+    memorySize: 256
+    description: get a list of all tenants
+    events:
+      - http:
+          authorizer: aws_iam
+          method: get
+          path: /
+      - http:
+          authorizer: aws_iam
+          method: post
+          path: /
+    iamRoleStatementsName: get-all-tenants-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+
+  get-all-vendor-installations:
+    handler: get_installations.all_installations
+    memorySize: 256
+    description: get a list of all installations
+    events:
+      - http:
+          authorizer: aws_iam
+          method: get
+          path: /installations/{vendor}
+    warmup: *warmup
+    iamRoleStatementsName: get-all-vendor-installations-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+
+  get-tenant-by-installation-id:
+    handler: get_tenant.from_installation_id
+    memorySize: 256
+    description: get a tenant using the installation id
+    events:
+      - http:
+          authorizer: aws_iam
+          method: get
+          path: /vendor/{vendor}/installation/{installation_id}
+    warmup: *warmup
+    iamRoleStatementsName: get-tenant-by-installation-id-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+      - Effect: Allow
+        Action: execute-api:Invoke
+        Resource:
+          # authentication-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${opt:stage}/POST/token/internal
+          # github-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${self:provider.stage}/GET/app/*/installation/*
+
+  get-tenant-by-id:
+    handler: get_tenant.by_id
+    memorySize: 256
+    description: get a tenant using the tenant id
+    events:
+      - http:
+          authorizer: aws_iam
+          method: get
+          path: /{tenant_id}
+    warmup: *warmup
+    iamRoleStatementsName: get-tenant-by-id-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+
+  get-tenant-by-owner:
+    handler: get_tenant.from_owner
+    memorySize: 256
+    description: get a tenant using an owner name
+    events:
+      - http:
+          authorizer: aws_iam
+          method: get
+          path: /vendor/{vendor}/owner/{owner}
+    warmup: *warmup
+    iamRoleStatementsName: get-tenant-by-owner-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+          - dynamodb:GetItem
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+      - Effect: Allow
+        Action: execute-api:Invoke
+        Resource:
+          # authentication-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${opt:stage}/POST/token/internal
+          # github-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${self:provider.stage}/GET/app/*/installation/*
+
+  set-centralized-repo:
+    handler: set_centralized_repo.handler
+    memorySize: 512
+    description: set a installation centralized repo
+    events:
+      - http: &jwt-authorizer
+          path: /vendor/{vendor}/app_id/{app_id}/installation/{installation_id}/centralized-repo
+          method: put
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer}
+            type: request
+            resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - Tenant
+              - tenant
+            allowCredentials: false
+    warmup: *warmup
+    iamRoleStatementsName: set-centralized-repo-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - sts:AssumeRole
+        Resource:
+          - ${ssm:/${self:custom.env_name}/infra/iam-role/dynamodb-assumed-iam-role}
+      - Effect: Allow
+        Action: events:PutEvents
+        Resource:
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/websocket-push
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/installations
+      - Effect: Allow
+        Action:
+          - sqs:GetQueueUrl
+          - sqs:SendMessage
+        Resource: arn:aws:sqs:${aws:region}:${aws:accountId}:InitializePlanQueue
+      - Effect: Allow
+        Action: execute-api:Invoke
+        Resource:
+          # github-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${self:provider.stage}/GET/app/*/installation/*
+
+  validate-centralized-repo:
+    handler: validate_centralized_repo.handler
+    memorySize: 512
+    description: validate a installation centralized repo
+    events:
+      - http:
+          <<: *jwt-authorizer
+          path: /vendor/{vendor}/app_id/{app_id}/installation/{installation_id}/centralized-repo/validate
+          method: put
+    warmup: *warmup
+    iamRoleStatementsName: validate-centralized-repo-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - sts:AssumeRole
+        Resource:
+          - ${ssm:/${self:custom.env_name}/infra/iam-role/dynamodb-assumed-iam-role}
+      - Effect: Allow
+        Action: execute-api:Invoke
+        Resource:
+          # github-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${self:provider.stage}/GET/app/*/installation/*
+
+  handle-centralized-asset-update:
+    handler: handle_centralized_asset_update.handler
+    memorySize: 256
+    description: Handle centralized asset update
+    events:
+      - eventBridge:
+          eventBus: ${ssm:/${self:custom.env_name}/infra/event-bus/asset-events, 'default'}
+          pattern:
+            source:
+              - "asset-service"
+            detail-type:
+              - "asset-update"
+              - "asset-deleted"
+    iamRoleStatementsName: handle-centralized-asset-update
+    iamRoleStatements:
+      - Effect: Allow
+        Action: events:PutEvents
+        Resource:
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/websocket-push
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/installations
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+      - Effect: Allow
+        Action: execute-api:Invoke # enrich installation
+        Resource:
+          # authentication-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${opt:stage}/POST/token/internal
+          # github-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${self:provider.stage}/GET/app/*/installation/*
+          # plan-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${opt:stage}/DELETE/items
+
+  get_integrations:
+    handler: get_integrations.handler
+    memorySize: 512
+    description: Get all integrations available for tenant
+    environment:
+      SLACK_CLIENT_ID: ${ssm:/${self:custom.env_name}/infra/slack-app/client-id, '1184122138960.2244019598131'}
+      SLACK_APP_ID: ${ssm:/${self:custom.env_name}/infra/slack-app/app-id, 'A02760KHL3V'}
+      GITHUB_APP_ID: ${ssm:/${self:custom.env_name}/infra/github-app/app-id, 'my-app-id'}
+      GITHUB_APP_NAME: ${ssm:/${self:custom.env_name}/infra/github-app/app-name, 'my_app_name'}
+    events:
+      - http:
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer}
+            type: request
+            resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+          method: get
+          path: /integrations
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - Tenant
+              - tenant
+            allowCredentials: false
+    warmup: *warmup
+    iamRoleStatementsName: get-integrations-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action: execute-api:Invoke
+        Resource:
+          # oauth-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${opt:stage}/POST/state-token
+
+  get_installations:
+    handler: get_installations.handler
+    memorySize: 512
+    description: Get all installations for tenant and vendor
+    events:
+      - http:
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer}
+            type: request
+            resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+          method: get
+          path: /vendor/{vendor}/installation
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+            allowCredentials: false
+      - http:
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer}
+            type: request
+            resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+          method: get
+          path: /installations
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - Tenant
+              - tenant
+            allowCredentials: false
+    warmup: *warmup
+    iamRoleStatementsName: get-installations-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+      - Effect: Allow
+        Action:
+          - sts:AssumeRole
+        Resource:
+          - ${ssm:/${self:custom.env_name}/infra/iam-role/dynamodb-assumed-iam-role}
+      - Effect: Allow
+        Action: execute-api:Invoke
+        Resource:
+          # authentication-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${opt:stage}/POST/token/internal
+          # github-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${self:provider.stage}/GET/app/*/installation/*
+
+  delete-installation:
+    handler: delete_installation.handler
+    memorySize: 256
+    description: marks the installation as unused
+    events:
+      - http:
+          authorizer: aws_iam
+          method: delete
+          path: /vendor/{vendor}/installation/{installation_id}
+    iamRoleStatementsName: delete-installation-role
+    iamRoleStatements: &modify-tenants-role
+      - Effect: Allow
+        Action: events:PutEvents
+        Resource:
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/websocket-push
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/installations
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+
+  activate-installation:
+    handler: activate_installation.handler
+    memorySize: 256
+    description: marks an inactive installation as active
+    events:
+      - http:
+          authorizer: aws_iam
+          method: post
+          path: /vendor/{vendor}/installation/{installation_id}/activate
+    warmup: *warmup
+    iamRoleStatementsName: activate-installation-role
+    iamRoleStatements: *modify-tenants-role
+
+  get-user-by-vendor:
+    handler: user_handlers.get_user_by_vendor
+    memorySize: 512
+    description: get a User and its associated UserVendors by vendor
+    events:
+      - http:
+          authorizer: aws_iam
+          method: get
+          path: /user/uservendor/{user_vendor_id}/tenant/{tenant_id}/vendor/{vendor}
+          cors: true
+      - http:
+          authorizer: aws_iam
+          method: get
+          path: /user/uservendor/{user_vendor_id}/vendor/{vendor}
+          cors: true
+    warmup: *warmup
+    iamRoleStatementsName: get-user-by-vendor-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users/index/*
+
+  create-user:
+    handler: user_handlers.create_user
+    memorySize: 256
+    description: create a User with associated UserVendors
+    events:
+      - http:
+          authorizer: auth-by-vendor-jwt
+          method: post
+          path: /user/installation/{installation_id}
+          cors: true
+    warmup: *warmup
+    iamRoleStatementsName: create-user-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+      - Effect: Allow
+        Action:
+          - dynamodb:BatchWriteItem
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users/index/*
+
+  handle-user-signup:
+    handler: user_handlers.handle_user_signup
+    memorySize: 256
+    description: create a User with associated UserVendors
+    events:
+      - http:
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer, 'default'}
+            type: request
+            # if 0 caching is disabled / max value is 3600 for caching results
+            resultTtlInSeconds: 0
+          method: post
+          path: /sign-up
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - Tenant
+              - tenant
+            allowCredentials: false
+    warmup: *warmup
+    iamRoleStatementsName: handle-user-signup-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action: ssm:GetParameter
+        Resource: arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/*/service-discovery/*-service
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+      - Effect: Allow
+        Action:
+          - dynamodb:BatchWriteItem
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:Query
+          - dynamodb:DeleteItem
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users/index/*
+      - Effect: Allow
+        Action: events:PutEvents
+        Resource:
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/tenants
+          - ${ssm:/${self:custom.env_name}/infra/event-bus/analytics, "arn:aws:events:us-east-1:000000000000:event-bus/analytics"}
+      - Effect: Allow
+        Action:
+          - secretsmanager:DescribeSecret
+          - secretsmanager:GetSecretValue
+        Resource:
+          - arn:aws:secretsmanager:${aws:region}:${aws:accountId}:secret:frontegg-*
+      - Effect: Allow
+        Action: execute-api:Invoke
+        Resource:
+          # authentication-service
+          # This is intentional - The Slack service API does not accept a frontegg user token, hence we
+          # have to use the internal token. This is used only in this lambda.
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${opt:stage}/POST/token/internal
+          # oauth-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${opt:stage}/POST/state-token
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${self:provider.stage}/GET/state-token/token/*/vendor/frontegg
+          # github-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${self:provider.stage}/GET/app/*/installation/*/owner/*/user/*/is-member
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${self:provider.stage}/GET/app/*/installation/*/data
+
+  update-user:
+    handler: user_handlers.update_user
+    memorySize: 256
+    description: update user details in the IDP
+    events:
+      - http:
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer}
+            type: request
+            resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+          method: post
+          path: /user/update
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - Tenant
+              - tenant
+            allowCredentials: false
+    warmup: *warmup
+    iamRoleStatementsName: update-user-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - secretsmanager:DescribeSecret
+          - secretsmanager:GetSecretValue
+        Resource:
+          - arn:aws:secretsmanager:${aws:region}:${aws:accountId}:secret:frontegg-*
+
+  get-all-users:
+    handler: user_handlers.get_all_users
+    memorySize: 256
+    description: Gets all users for a tenant
+    events:
+      - http:
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer}
+            type: request
+            resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+          method: get
+          path: /users
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - Tenant
+              - tenant
+            allowCredentials: false
+    warmup: *warmup
+    iamRoleStatementsName: get-all-users-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users
+
+  generate-tenant-invitation-token:
+    handler: generate_tenant_invitation_token.handler
+    memorySize: 256
+    description: Returns a tenant invitation token
+    events:
+      - http:
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer}
+            type: request
+            resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+          method: post
+          path: /{tenant_id}/invitation-token
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - Tenant
+              - tenant
+            allowCredentials: false
+    warmup: *warmup
+    iamRoleStatementsName: generate-tenant-invitation-token-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - secretsmanager:DescribeSecret
+          - secretsmanager:GetSecretValue
+        Resource:
+          - arn:aws:secretsmanager:${aws:region}:${aws:accountId}:secret:frontegg-*
+
+  create-user-vendor:
+    handler: user_handlers.create_user_vendor
+    memorySize: 256
+    description: create a UserVendor
+    events:
+      - http:
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer}
+            type: request
+            resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+          method: post
+          path: /user/uservendor
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - Tenant
+              - tenant
+            allowCredentials: false
+      - eventBridge:
+          eventBus: ${ssm:/${self:custom.env_name}/infra/event-bus/tenants, 'default'}
+          pattern:
+            source:
+              - "applifecycle-service"
+            detail-type:
+              - "create-user-vendor"
+    warmup: *warmup
+    iamRoleStatementsName: create-user-vendor-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+      - Effect: Allow
+        Action:
+          - dynamodb:BatchWriteItem
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:Query
+          - dynamodb:DeleteItem
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users/index/*
+
+  get-users-vendor-by-vendor:
+    handler: user_handlers.get_users_vendor_by_vendor
+    memorySize: 256
+    description: get all users vendor by vendor
+    events:
+      - http:
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer}
+            type: request
+            resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+          method: get
+          path: /user/uservendor/vendor/{vendor}
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - Tenant
+              - tenant
+            allowCredentials: false
+    warmup: *warmup
+    iamRoleStatementsName: get-users-vendor-by-vendor-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users/index/*
+
+  get-user-by-vendor-and-vendor-id:
+    handler: user_handlers.get_user_by_vendor_and_vendor_id
+    memorySize: 256
+    description: get a user by vendor and vendor id
+    events:
+      - http:
+          authorizer:
+            arn: ${ssm:/${self:custom.env_name}/infra/lambda/jwt-authorizer}
+            type: request
+            resultTtlInSeconds: 0 # if 0 caching is disabled / max value is 3600 for caching results
+          method: get
+          path: /user/vendor/{vendor}/vendorId/{vendor_user_id}
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - Authorization
+              - Tenant
+              - tenant
+            allowCredentials: false
+    warmup: *warmup
+    iamRoleStatementsName: get-user-by-vendor-and-vendor-id-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - sts:AssumeRole
+        Resource:
+          - ${ssm:/${self:custom.env_name}/infra/iam-role/general-tenant-isolation-iam-role}
+      - Effect: Allow
+        Action:
+          - secretsmanager:DescribeSecret
+          - secretsmanager:GetSecretValue
+        Resource:
+          - arn:aws:secretsmanager:${aws:region}:${aws:accountId}:secret:frontegg-*
+
+  user-deleted-event-handler:
+    handler: user_events.handle_user_deleted_event
+    memorySize: 512
+    description: Handle Frontegg user deleted event
+    events:
+      - eventBridge:
+          eventBus: ${ssm:/${self:custom.env_name}/infra/event-bus/webhook-dispatcher, 'default'}
+          pattern:
+            source:
+              - "webhook-service"
+            detail-type:
+              - "webhook-call"
+            detail:
+              event_type:
+                - "frontegg.user.deleted"
+    iamRoleStatementsName: user-deleted-event-handler-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action: ssm:GetParameter
+        Resource: arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/*/service-discovery/*-service
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+          - dynamodb:UpdateItem
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users/index/*
+
+  user-updated-event-handler:
+    handler: user_events.handle_user_updated_event
+    memorySize: 512
+    description: Handle Frontegg user updated event
+    events:
+      - eventBridge:
+          eventBus: ${ssm:/${self:custom.env_name}/infra/event-bus/webhook-dispatcher, 'default'}
+          pattern:
+            source:
+              - "webhook-service"
+            detail-type:
+              - "webhook-call"
+            detail:
+              event_type:
+                - "frontegg.user.updated"
+    iamRoleStatementsName: user-updated-event-handler-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action: ssm:GetParameter
+        Resource: arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/*/service-discovery/*-service
+      - Effect: Allow
+        Action:
+          - dynamodb:BatchWriteItem
+          - dynamodb:Query
+          - dynamodb:UpdateItem
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users/index/*
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+      - Effect: Allow
+        Action:
+          - secretsmanager:DescribeSecret
+          - secretsmanager:GetSecretValue
+        Resource:
+          - arn:aws:secretsmanager:${aws:region}:${aws:accountId}:secret:frontegg-*
+      - Effect: Allow
+        Action: execute-api:Invoke
+        Resource:
+          # authentication-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${opt:stage}/POST/token/internal
+          # oauth-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${opt:stage}/POST/state-token
+
+  validate-and-classify-frontegg-webhook:
+    handler: webhooks.validate_and_classify_frontegg_webhook
+    memorySize: 256
+    description: Custom endpoint to verify webhook event signature and classify the event
+    events:
+      - http:
+          authorizer: aws_iam
+          method: post
+          path: /validate-and-classify
+    iamRoleStatementsName: validate-and-classify-frontegg-webhook-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - secretsmanager:DescribeSecret
+          - secretsmanager:GetSecretValue
+        Resource:
+          - arn:aws:secretsmanager:${aws:region}:${aws:accountId}:secret:frontegg-*
+
+  invoke-cross-service-tenant-data-deletion:
+    handler: invoke_cross_service_tenant_data_deletion.handler
+    memorySize: 512
+    description: Start cross service tenant data deletion using event bridge
+    iamRoleStatementsName: tenant-service-invoke-cross-service-tenant-data-deletion-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action: events:PutEvents
+        Resource: arn:aws:events:${aws:region}:${aws:accountId}:event-bus/tenant-deletion
+      - Effect: Allow
+        Action:
+          - sts:AssumeRole
+        Resource:
+          - ${ssm:/${self:custom.env_name}/infra/iam-role/dynamodb-assumed-iam-role}
+      - Effect: Allow
+        Action:
+          - sqs:GetQueueUrl
+          - sqs:SendMessage
+        Resource:
+          - arn:aws:sqs:${aws:region}:${aws:accountId}:SendInternalNotificationQueue
+
+  create-vendor-tenant:
+    handler: create_vendor_tenant.handler
+    memorySize: 128
+    description: Creates external vendor tenant and returns invitation token for user
+    events:
+      - http:
+          authorizer: aws_iam
+          method: post
+          path: /vendor/{vendor}
+    warmup: *warmup
+    iamRoleStatementsName: create-vendor-tenant-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - secretsmanager:DescribeSecret
+          - secretsmanager:GetSecretValue
+        Resource:
+          - arn:aws:secretsmanager:${aws:region}:${aws:accountId}:secret:frontegg-*
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:Query
+          - dynamodb:BatchWriteItem
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users/index/*
+      - Effect: Allow
+        Action: events:PutEvents
+        Resource:
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/tenants
+          - ${ssm:/${self:custom.env_name}/infra/event-bus/analytics, "arn:aws:events:us-east-1:000000000000:event-bus/analytics"}
+
+  delete-tenant-data:
+    handler: delete_tenant_data.handler
+    memorySize: 512
+    description: removes all tenant data from db
+    events:
+      - eventBridge:
+          eventBus: ${ssm:/${self:custom.env_name}/infra/event-bus/tenant-deletion, 'default'}
+          pattern:
+            source:
+              - "tenant-service"
+              - "backoffice-service"
+            detail-type:
+              - "delete-tenant-data"
+    iamRoleStatementsName: tenant-service-delete-tenant-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+          - dynamodb:BatchWriteItem
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Users
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Preferences
+      - Effect: Allow
+        Action:
+          - secretsmanager:DescribeSecret
+          - secretsmanager:GetSecretValue
+        Resource:
+          - arn:aws:secretsmanager:${aws:region}:${aws:accountId}:secret:frontegg*
+      - Effect: Allow
+        Action:
+          - sts:AssumeRole
+        Resource:
+          - ${ssm:/${self:custom.env_name}/infra/iam-role/dynamodb-assumed-iam-role}
+      - Effect: Allow
+        Action: events:PutEvents
+        Resource:
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/tenants
+          - ${ssm:/${self:custom.env_name}/infra/event-bus/analytics, "arn:aws:events:us-east-1:000000000000:event-bus/analytics"}
+      - Effect: Allow
+        Action: execute-api:Invoke
+        Resource:
+          # github-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${self:provider.stage}/DELETE/app/*/installation/*
+
+  auth-by-vendor-jwt:
+    handler: auth_by_vendor_jwt.handler
+    memorySize: 256
+    description: Authenticate caller by vendor jwt
+    iamRoleStatementsName: auth-by-vendor-jwt-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action: ssm:GetParameter
+        Resource:
+          - arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/*/link-user/*/*/*
+
+  cloud-formation-stack-listener:
+    handler: cloud_formation_stack_listener.handler
+    memorySize: 512
+    timeout: 300
+    description: Handles cloud formation stack events
+    events:
+      - sns:
+          arn: arn:aws:sns:ap-northeast-2:${aws:accountId}:JitTenantCloudFormationUpdates-ap-northeast-2
+      - sns:
+          arn: arn:aws:sns:ap-southeast-1:${aws:accountId}:JitTenantCloudFormationUpdates-ap-southeast-1
+      - sns:
+          arn: arn:aws:sns:ap-southeast-2:${aws:accountId}:JitTenantCloudFormationUpdates-ap-southeast-2
+      - sns:
+          arn: arn:aws:sns:eu-central-1:${aws:accountId}:JitTenantCloudFormationUpdates-eu-central-1
+      - sns:
+          arn: arn:aws:sns:eu-west-3:${aws:accountId}:JitTenantCloudFormationUpdates-eu-west-3
+      - sns:
+          arn: arn:aws:sns:ap-northeast-3:${aws:accountId}:JitTenantCloudFormationUpdates-ap-northeast-3
+      - sns:
+          arn: arn:aws:sns:ap-south-1:${aws:accountId}:JitTenantCloudFormationUpdates-ap-south-1
+      - sns:
+          arn: arn:aws:sns:eu-north-1:${aws:accountId}:JitTenantCloudFormationUpdates-eu-north-1
+      - sns:
+          arn: arn:aws:sns:eu-west-2:${aws:accountId}:JitTenantCloudFormationUpdates-eu-west-2
+      - sns:
+          arn: arn:aws:sns:sa-east-1:${aws:accountId}:JitTenantCloudFormationUpdates-sa-east-1
+      - sns:
+          arn: arn:aws:sns:us-east-1:${aws:accountId}:JitTenantCloudFormationUpdates-us-east-1
+      - sns:
+          arn: arn:aws:sns:us-west-1:${aws:accountId}:JitTenantCloudFormationUpdates-us-west-1
+      - sns:
+          arn: arn:aws:sns:ap-northeast-1:${aws:accountId}:JitTenantCloudFormationUpdates-ap-northeast-1
+      - sns:
+          arn: arn:aws:sns:ca-central-1:${aws:accountId}:JitTenantCloudFormationUpdates-ca-central-1
+      - sns:
+          arn: arn:aws:sns:eu-west-1:${aws:accountId}:JitTenantCloudFormationUpdates-eu-west-1
+      - sns:
+          arn: arn:aws:sns:us-east-2:${aws:accountId}:JitTenantCloudFormationUpdates-us-east-2
+      - sns:
+          arn: arn:aws:sns:us-west-2:${aws:accountId}:JitTenantCloudFormationUpdates-us-west-2
+    warmup: *warmup
+    iamRoleStatementsName: cloud-formation-stack-listener-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - sts:AssumeRole
+        Resource:
+          - arn:aws:iam::*:role/*JitRole*
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+          - dynamodb:Query
+        Resource:
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants
+          - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/Tenants/index/*
+      - Effect: Allow
+        Action: events:PutEvents
+        Resource:
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/websocket-push
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/installations
+      - Effect: Allow
+        Action: execute-api:Invoke
+        Resource:
+          # authentication-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${opt:stage}/POST/token/internal
+          # oauth-service
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${self:provider.stage}/GET/state-token/token/*/vendor/aws
+          - arn:aws:execute-api:${aws:region}:${aws:accountId}:*/${self:provider.stage}/DELETE/state-token/token/*/vendor/aws
+
+  partial-update-onboarding-details:
+    handler: partial_update_onboarding_details.handler
+    memorySize: 256
+    description: partial update onboarding details
+    events:
+      - http:
+          authorizer: *jwtAuthorizer
+          method: patch
+          path: /onboarding
+          cors: true
+    warmup: *warmup
+    iamRoleStatementsName: partial-update-onboarding-details-role
+    iamRoleStatements:
+      - Effect: Allow
+        Action: events:PutEvents
+        Resource:
+          - arn:aws:events:${aws:region}:${aws:accountId}:event-bus/tenants
+      - <<: *generalTenantIsolationRole
+
+  get-onboarding-details:
+    handler: get_onboarding_details.handler
+    memorySize: 256
+    description: get onboarding details
+    events:
+      - http:
+          authorizer: *jwtAuthorizer
+          method: get
+          path: /onboarding
+          cors: true
+    warmup: *warmup
+    iamRoleStatementsName: get-onboarding-details-role
+    iamRoleStatements:
+      - <<: *generalTenantIsolationRole
+
+resources:
+  Resources:
+    Tenants: ${file(resources.json):Tenants}
+    Preferences: ${file(resources.json):Preferences}
+    DynamoTenantsAlarmConsumedWriteCapacityUnits: ${file(resources.json):DynamoTenantsAlarmConsumedWriteCapacityUnits}
+    TopicCloudwatchTenantsAlarm:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ${self:service}-${self:provider.stage}-tenants-topic-cloudwatch-alarm
+    TopicCloudwatchTenantsAlarmSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: aws-alerts@jit.io
+        Protocol: email
+        TopicArn:
+          Ref: TopicCloudwatchTenantsAlarm
+
+    Users:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Users
+        BillingMode: PAY_PER_REQUEST
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: true
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: GSI1PK
+            AttributeType: S
+          - AttributeName: GSI1SK
+            AttributeType: S
+          - AttributeName: GSI2PK
+            AttributeType: S
+          - AttributeName: GSI2SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: GSI1
+            KeySchema:
+              - AttributeName: GSI1PK
+                KeyType: HASH
+              - AttributeName: GSI1SK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: "ALL"
+          - IndexName: GSI2
+            KeySchema:
+              - AttributeName: GSI2PK
+                KeyType: HASH
+              - AttributeName: GSI2SK
+                KeyType: RANGE
+            Projection:
+              ProjectionType: "ALL"
+    DynamoUsersAlarmConsumedWriteCapacityUnits:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmDescription: High ConsumedWriteCapacityUnits in DynamoDB Users table
+        Namespace: AWS/DynamoDB
+        MetricName: ConsumedWriteCapacityUnits
+        Statistic: Sum
+        Threshold: 1
+        ComparisonOperator: GreaterThanThreshold
+        EvaluationPeriods: 1
+        Period: 60
+        Dimensions:
+          - Name: "TableName"
+            Value:
+              Fn::GetAtt: [Users, Arn]
+        AlarmActions:
+          - Ref: TopicCloudwatchUsersAlarm
+    TopicCloudwatchUsersAlarm:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ${self:service}-${self:provider.stage}-users-topic-cloudwatch-alarm
+    TopicCloudwatchUsersAlarmSubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Endpoint: aws-alerts@jit.io
+        Protocol: email
+        TopicArn:
+          Ref: TopicCloudwatchUsersAlarm
+
+    # Required for lambdas with custom authorizers
+    # if you reject an authorization request, you don't have the ability to specify the CORS headers in your response.
+    # This can make it difficult for the client browser to understand the response.
+    # Source: https://www.serverless.com/blog/cors-api-gateway-survival-guide/
+    GatewayResponseDefault4XX:
+      Type: "AWS::ApiGateway::GatewayResponse"
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: "ApiGatewayRestApi"
+    GatewayResponseDefault5XX:
+      Type: "AWS::ApiGateway::GatewayResponse"
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: DEFAULT_5XX
+        RestApiId:
+          Ref: "ApiGatewayRestApi"
