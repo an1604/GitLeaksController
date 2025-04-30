@@ -1,11 +1,23 @@
-FROM python:3.10-alpine3.16
+FROM ubuntu:latest
 
-ENV PYTHONDONTWRITEBYTECODE 1
-COPY --from=zricethezav/gitleaks:v8.5.1 /usr/bin/gitleaks /usr/bin/gitleaks
+# CKV_DOCKER_5: Using update instruction alone
+RUN apt-get update
 
-WORKDIR /code
-COPY . /code/
+# Installing packages without cleanup
+RUN apt-get install -y python3 python3-pip curl
 
-RUN pip install --no-cache-dir -r requirements.txt
+# Adding credentials directly in Dockerfile - security leak
+ENV AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+ENV AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
 
-ENTRYPOINT ["python", "controller.py"]
+# Working as root - not creating a user
+# CKV_DOCKER_3: Ensure that a user for the container has been created
+WORKDIR /app
+
+COPY . .
+
+# Exposing multiple ports including sensitive ones
+EXPOSE 22 80 443 8080
+
+# Running as root by default
+CMD ["python3", "app.py"] 

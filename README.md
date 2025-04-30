@@ -1,68 +1,42 @@
-# Gitleaks Controller
+# Security Leaks Test Files for Checkov
 
-A Python-based wrapper for [Gitleaks](https://github.com/zricethezav/gitleaks) that provides an easy way to scan
-directories for sensitive information leaks. This tool supports running scans locally or within a Docker container and
-provides structured outputs for easy integration with other tools.
+This directory contains deliberately insecure Infrastructure as Code (IaC) files for testing Checkov's scanning capabilities. These files contain common security issues that Checkov is configured to detect.
 
-## Installation
+## Files Included
 
-### 1. Clone the Repository
+1. **aws_s3_insecure.tf** - Terraform file with AWS S3 bucket security issues:
+   - Public read-write ACLs
+   - Missing block public access settings
+   - Missing bucket versioning
+   - Missing server-side encryption
 
-```bash
-git clone https://github.com/an1604/GitLeaksController.git
-cd GitLeaksController
-docker build -t gitleaks-controller:latest . 
-docker run --rm -v "<LOCAL_DIRECTORY_TO_SCAN>:/code/<CHOOSE_DIRECTORY_NAME>" gitleaks-controller:latest --dir /code/<CHOOSE_DIRECTORY_NAME> 
-```
+2. **gcp_resources_insecure.tf** - Terraform file with GCP security issues:
+   - Publicly accessible Cloud Storage buckets
+   - Missing versioning in Cloud Storage
+   - GKE clusters with public control planes
+   - Cloud SQL instances open to the world
 
-#### To avoid errors, ensure:
+3. **insecure_deployment.yaml** - Kubernetes deployment with security issues:
+   - Use of default namespace
+   - Missing liveness/readiness probes
+   - Using latest image tag
+   - Running as privileged containers
+   - Host network/IPC/PID access
+   - Dangerous capabilities
+   - Default service account usage
+   - Secrets in environment variables
 
-1. **Replace `<LOCAL_DIRECTORY_TO_SCAN>`** with the absolute path of the local directory to scan.
-2. **Replace `<CHOOSE_DIRECTORY_NAME>`** with a valid directory name inside the container.
+4. **Dockerfile** - Dockerfile with security issues:
+   - Running as root (no user creation)
+   - Update instructions used alone
+   - Credentials in environment variables
+   - Exposing sensitive ports
 
-#### Tips:
+5. **cloudformation_template.yaml** - CloudFormation template with security issues:
+   - S3 bucket with public access
+   - Overly permissive security groups
+   - Lambda without concurrency limits
+   - Wildcard IAM permissions
+   - Insecure NACL configurations
 
-1. For Windows, ensure paths use `\\` (e.g., `C:\\Users\\YourName\\YourFolder`).
-2. Verify local paths exist and placeholders (`<...>`) are replaced correctly.
-
-### 2. Optional: Run Using Prebuilt Docker Image from Docker Hub
-
-If you prefer not to build the Docker image locally, you can pull the prebuilt image from Docker Hub:
-
-```bash
-docker pull avivnat13/gitleaks-controller:latest
-docker run --rm -v "<LOCAL_DIRECTORY_TO_SCAN>:/code/<CHOOSE_DIRECTORY_NAME>" avivnat13/gitleaks-controller:latest --dir /code/<CHOOSE_DIRECTORY_NAME>
-```
-
-## Flags and Usage
-
-The Gitleaks Controller supports several configurable flags that allow you to customize its behavior. You can use these
-flags whether running the tool locally or via Docker.
-
-### **Available Flags**
-
-| Flag                                | Default                                                                             | Description                                                       |
-|-------------------------------------|-------------------------------------------------------------------------------------|-------------------------------------------------------------------|
-| `--dir DIRNAME`                     | Your current working directory (`C:/Users/אביב/PycharmProjects/GitLeaksController`) | Path to the directory to scan for sensitive information leaks.    |
-| `--output_filename`                 | `output.json`                                                                       | Name of the file where scan results will be saved.                |
-| `--show_result`, `--no-show_result` | `True`                                                                              | Print the scan results directly to the terminal after completion. |
-| `--bonus`, `--no-bonus`             | `True`                                                                              | Include additional structured output using Pydantic models.       |
-
-### **How to Use the Flags**
-
-You can pass the flags as arguments.
-
-#### 1. Using option 1 (cloning the repo):
-
-```bash
-docker run --rm -v "<LOCAL_DIRECTORY_TO_SCAN>:/code" gitleaks-controller:latest --dir /code --output_filename results.json --bonus --show_result
-```
-
-#### 2. Using option 2 (optional, pulling from Dockerhub):
-
-```bash
-docker run --rm -v "<LOCAL_DIRECTORY_TO_SCAN>:/code" avivnat13/gitleaks-controller:latest --dir /code --output_filename results.json --bonus --show_result
-```
-
-
-
+These files can be used to verify that Checkov correctly identifies the security risks in your Infrastructure as Code. 
